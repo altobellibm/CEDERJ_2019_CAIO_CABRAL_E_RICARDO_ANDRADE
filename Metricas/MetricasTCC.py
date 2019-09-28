@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import chisquare
+from scipy.stats import fisher_exact as fisher
 from math import sqrt
 
 baseDados = "BPressureNishiBook.dat"
@@ -9,25 +10,21 @@ baseRegras = "BPressureNishiBook.txt"
 
 class raMetricas:
     @staticmethod
-    def intersect(bd, itemset):
+    def intersect(db, itemset):
         # Cria um vetor de colunas (matriz) de bd, usando a lista itemset como referencia de indice.
-        base = bd[:, np.array(itemset) - 1]
+        base = db[:, np.array(itemset) - 1]
         # Metodo all do np achata a matriz usando and logico no eixo passado como parametro.
         return base.all(axis=1)
 
     @staticmethod
-    def abSupp(bd, itemset1, itemset2=None, negativo=False):
+    def abSupp(db, itemset1, itemset2=None, negativo=False):
         itemset = itemset1 + (itemset2 if itemset2 is not None else [])
         # Suporte negativo verifica a existência de transações que nao contem nenhum item do itemset
         # Chama a msma funcao de intersecao, mas com a base de dados invertida.
         if negativo:
-            return np.sum(raMetricas.intersect(abs(bd - 1), itemset), axis=0)
+            return np.sum(raMetricas.intersect(abs(db - 1), itemset), axis=0)
         # np.sum achata o vetor usando soma no eixo passado como parametro.
-        return np.sum(raMetricas.intersect(bd, itemset), axis=0)
-
-    @staticmethod
-    def suppColumns(bd1, bd2):
-        print(ok)
+        return np.sum(raMetricas.intersect(db, itemset), axis=0)
 
     @staticmethod
     def relSupp(bd, itemset, itemset2=None, negativo=False):
@@ -54,52 +51,52 @@ class raMetricas:
         return supRegra / supAnt
 
     @staticmethod
-    def addedValue(bd, antc, consq):
-        return raMetricas.conf(bd, antc, consq) - raMetricas.relSupp(bd, consq)
+    def addedValue(db, antc, consq):
+        return raMetricas.conf(db, antc, consq) - raMetricas.relSupp(db, consq)
 
     @staticmethod
-    def allConf(bd, itemset):
-        max = raMetricas.subSupp(bd, itemset)
+    def allConf(db, itemset):
+        max = raMetricas.subSupp(db, itemset)
         max = np.max(max)
-        max /= bd.shape[0]
-        return raMetricas.relSupp(bd, itemset) / max
+        max /= db.shape[0]
+        return raMetricas.relSupp(db, itemset) / max
 
     @staticmethod
-    def casualSupp(bd, ant, cons):
-        return raMetricas.relSupp(bd, ant, cons) + raMetricas.relSupp(bd, ant, cons, negativo=True)
+    def casualSupp(db, ant, cons):
+        return raMetricas.relSupp(db, ant, cons) + raMetricas.relSupp(db, ant, cons, negativo=True)
 
     @staticmethod
-    def casualConf(bd, ant, cons):
-        conf1 = raMetricas.conf(bd, ant, cons)
-        conf2 = raMetricas.abSupp(bd, ant, cons, negativo=True) / raMetricas.abSupp(bd, ant, negativo=True)
+    def casualConf(db, ant, cons):
+        conf1 = raMetricas.conf(db, ant, cons)
+        conf2 = raMetricas.abSupp(db, ant, cons, negativo=True) / raMetricas.abSupp(db, ant, negativo=True)
         return (conf1 + conf2) / 2
 
     @staticmethod
-    def certFactor(bd, ant, cons):
-        cf = raMetricas.conf(bd, ant, cons) - raMetricas.relSupp(bd, cons)
-        return cf / raMetricas.relSupp(bd, cons, negativo=True)
+    def certFactor(db, ant, cons):
+        cf = raMetricas.conf(db, ant, cons) - raMetricas.relSupp(db, cons)
+        return cf / raMetricas.relSupp(db, cons, negativo=True)
 
     @staticmethod
-    def chiSqrd(bd, antc, cons):
+    def tbContingencia(db, antc, cons):
+        bdInv = abs(db-1)
+        lin = [raMetricas.intersect(db, antc), raMetricas.intersect(bdInv, antc)]
+        col = [raMetricas.intersect(db, cons), raMetricas.intersect(bdInv, cons)]
+        return np.matrix([[np.sum(i * j) for i in lin] for j in col])
+
+    @staticmethod
+    def chiSqrd(db, antc, cons):
         #    l1 = [5,15,5]
         #    l2 = [50,10,15]
         #    l3 = [55,25,20]
         #    a= np.matrix([l1, l2, l3])
 
-        bdInv = abs(bd - 1)
+        tb = raMetricas.tbContingencia(db, antc, cons)
+        df = tb.shape[1] - 1
 
-        # Montando tabela de contingencia
-        lin = [raMetricas.intersect(bd, antc), raMetricas.intersect(bdInv, antc)]
-        col = [raMetricas.intersect(bd, cons), raMetricas.intersect(bdInv, cons)]
+        calcEsp = lambda i, j: np.sum(tb[i, :]) * np.sum(tb[:, j]) / np.sum(tb)
 
-        tbCtg = np.matrix([[np.sum(i * j) for i in lin] for j in col])
-
-        df = tbCtg.shape[1] - 1
-
-        calcEsp = lambda i, j: np.sum(tbCtg[i, :]) * np.sum(tbCtg[:, j]) / np.sum(tbCtg)
-
-        esperado = [calcEsp(i, j) for i in range(tbCtg.shape[0]) for j in range(tbCtg.shape[0])]
-        observado = tbCtg.getA1()
+        esperado = [calcEsp(i, j) for i in range(tb.shape[0]) for j in range(tb.shape[0])]
+        observado = tb.getA1()
 
         chi, p = chisquare(f_obs=observado, f_exp=esperado, ddof=df)
         return chi
@@ -166,7 +163,10 @@ class raMetricas:
 
         return (supRA-supRegra) / supRA
 
-
+    @staticmethod
+    def fischers(db, antc, cons):
+        tb = raMetricas.tbContingencia(db, antc, cons)
+        return fisher(tb)[1]
 
 
 
