@@ -57,10 +57,13 @@ class raMetricas:
     @staticmethod
     def casualConf(bd, ant, cons):
         conf1 = raMetricas.conf(bd, ant, cons)
-        conf2 = raMetricas.abSupp(bd, ant, cons, negativo=True) / raMetricas.abSupp(ant, negativo=True)
+        conf2 = raMetricas.abSupp(bd, ant, cons, negativo=True) / raMetricas.abSupp(bd, ant, negativo=True)
         return (conf1 + conf2) / 2
 
-
+    @staticmethod
+    def certFactor(bd, ant, cons):
+        cf = raMetricas.conf(bd, ant, cons) - raMetricas.relSupp(bd, cons)
+        return cf / raMetricas.relSupp(bd, cons, negativo=True)
 
 mt = pd.read_table(baseDados, delim_whitespace=True, dtype="str", header=None)
 mtBinaria = pd.get_dummies(mt)
