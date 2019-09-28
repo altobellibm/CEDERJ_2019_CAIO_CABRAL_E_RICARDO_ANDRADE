@@ -30,7 +30,7 @@ class raMetricas:
 
     @staticmethod
     def subSupp(bd, itemset):
-        # Calcula o suporte de todos os 1-itemsets contidos em itemset.
+        # Calcula o suporte absoluto de todos os 1-itemsets contidos em itemset.
         subSup = bd[:, np.array(itemset) - 1]
         subSup = np.sum(subSup, axis=0)
         return subSup
@@ -91,6 +91,28 @@ class raMetricas:
 
         chi, p = chisquare(f_obs=observado, f_exp=esperado, ddof=df)
         return chi
+
+    @staticmethod
+    def crossSuppRatio(db, itemset):
+        subSup = raMetricas.subSupp(db, itemset)
+        return np.min(subSup) / np.max(subSup)
+
+    @staticmethod
+    def collectiveStrength(db, itemset):
+        violation = db.shape[0]-raMetricas.abSupp(db, itemset) - raMetricas.abSupp(db, itemset, negativo=True)
+        violation /= dados.shape[0]
+
+    @staticmethod
+    def conviction(db, ant, cons):
+        return (1 - raMetricas.relSupp(db, cons)) / 1 - raMetricas.conf(db, ant, cons)
+
+
+    sup = relSupp(itemset)
+
+    return ((1-violation)/1-sup) * ((sup)/violation)
+
+print(collectiveStrength([6,1]))
+
 
 
 mt = pd.read_table(baseDados, delim_whitespace=True, dtype="str", header=None)
