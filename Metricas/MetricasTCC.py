@@ -101,15 +101,24 @@ class raMetricas:
     def collectiveStrength(db, itemset):
         violation = db.shape[0]-raMetricas.abSupp(db, itemset) - raMetricas.abSupp(db, itemset, negativo=True)
         violation /= dados.shape[0]
+        sup = raMetricas.relSupp(db, itemset)
+
+        return ((1 - violation) / 1 - sup) * ((sup) / violation)
 
     @staticmethod
     def conviction(db, ant, cons):
         return (1 - raMetricas.relSupp(db, cons)) / 1 - raMetricas.conf(db, ant, cons)
 
+    @staticmethod
+    def cosine(db, antc, cons):
+        t1 = raMetricas.relSupp(db, antc, cons)
+        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
+        return t1 * np.sqrt(t2)
 
-    sup = relSupp(itemset)
+    @staticmethod
+    def coverage(db, antc, cons):
+        return raMetricas.relSupp(db, antc)
 
-    return ((1-violation)/1-sup) * ((sup)/violation)
 
 print(collectiveStrength([6,1]))
 
