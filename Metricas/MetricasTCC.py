@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import chisquare
+from math import sqrt
 
 baseDados = "BPressureNishiBook.dat"
 baseRegras = "BPressureNishiBook.txt"
@@ -25,6 +26,10 @@ class raMetricas:
         return np.sum(raMetricas.intersect(bd, itemset), axis=0)
 
     @staticmethod
+    def suppColumns(bd1, bd2):
+        print(ok)
+
+    @staticmethod
     def relSupp(bd, itemset, itemset2=None, negativo=False):
         return raMetricas.abSupp(bd, itemset, itemset2, negativo) / bd.shape[0]
 
@@ -40,6 +45,13 @@ class raMetricas:
         raSup = raMetricas.abSupp(bd, antc, consq)
         antSup = raMetricas.abSupp(bd, antc)
         return raSup / antSup
+
+    @staticmethod
+    def confDB(a, c):
+        base = np.hstack((a, c))
+        supRegra = np.sum(base.all(axis=0))
+        supAnt = np.sum(a(axis=0))
+        return supRegra / supAnt
 
     @staticmethod
     def addedValue(bd, antc, consq):
@@ -113,14 +125,50 @@ class raMetricas:
     def cosine(db, antc, cons):
         t1 = raMetricas.relSupp(db, antc, cons)
         t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
-        return t1 * np.sqrt(t2)
+        return t1 * sqrt(t2)
 
     @staticmethod
     def coverage(db, antc, cons):
         return raMetricas.relSupp(db, antc)
 
+    @staticmethod
+    def descCfConf(db, antc, cons):
+        baseCons = db[:, np.array(cons) - 1]
+        baseAnt = db[:, np.array(antc) - 1]
+        baseConsInv = abs(baseCons - 1)
 
-print(collectiveStrength([6,1]))
+        conf1 = raMetricas.conf(db, antc, cons)
+        conf2 = raMetricas.confDB(baseAnt, baseConsInv)
+
+        return conf1 - conf2
+
+
+    @staticmethod
+    def diffOfConf(db, antc, cons):
+        baseCons = db[:, np.array(cons) - 1]
+        baseAnt = db[:, np.array(antc) - 1]
+        baseAntInv = abs(baseAnt - 1)
+
+        confRA = raMetricas.conf(db, antc, cons)
+        conf2 = raMetricas.confDB(baseAntInv, baseCons)
+
+        return confRA - conf2
+
+    @staticmethod
+    def exCounterEx(db, antc, cons):
+        supRA = raMetricas.relSupp(db, antc, cons)
+
+        baseAnt = db[:, np.array(antc) - 1]
+        baseInvCons = abs(db[:, np.array(cons) - 1]-1)
+
+        base = np.hstack((baseAnt, baseInvCons))
+        supRegra = np.sum(base.all(axis=0))
+
+        return (supRA-supRegra) / supRA
+
+
+
+
 
 
 
@@ -137,4 +185,8 @@ regras["cons"] = regras["cons"].str.split()
 regras["antc"] = regras["antc"].str.split()
 '''
 
-print(raMetricas.conf(dados, [1], [6, 18]))
+#print(raMetricas.conf(dados, [1], [6, 18]))
+
+raMetricas.descCfConf(dados, [1], [6])
+
+#print(collectiveStrength([6,1]))
