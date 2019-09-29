@@ -224,7 +224,28 @@ class raMetricas:
 
     @staticmethod
     def klosgen(db, antc, cons):
-        return sqrt(raMetricas.relSupp(db, antc, cons)) * (raMetricas.conf(db, antc, cons) - raMetricas.relSupp(db, cons));
+        return sqrt(raMetricas.relSupp(db, antc, cons)) * (raMetricas.conf(db, antc, cons) - raMetricas.relSupp(db, cons))
+
+    @staticmethod
+    def kulczynski(db, antc, cons):
+        return (raMetricas.conf(db, antc, cons) + raMetricas.conf(db, cons, antc)) / 2
+
+    @staticmethod
+
+    def predictiveAssociation(db, antc, cons):
+        pass
+
+    @staticmethod
+    def laplaceConf(db, antc, cons):
+        pass
+
+    @staticmethod
+    def leastContradiction(db, antc, cons):
+        a = raMetricas.getCol(db, antc)
+        cN = raMetricas.getCol(db, cons, negativo=True)
+        termo1 = raMetricas.relSupp(db, antc, cons) - raMetricas.relSuppCol(a, cN)
+        termo2 = raMetricas.relSupp(db, cons)
+        return termo1 / termo2
 
 
 
