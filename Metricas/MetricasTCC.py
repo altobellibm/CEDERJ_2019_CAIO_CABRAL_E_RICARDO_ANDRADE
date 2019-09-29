@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pygini
 from scipy.stats import chisquare
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
@@ -15,6 +16,22 @@ class raMetricas:
         base = db[:, np.array(itemset) - 1]
         # Metodo all do np achata a matriz usando and logico no eixo passado como parametro.
         return base.all(axis=1)
+
+    @staticmethod
+    def getCol(db, itemset, negativo=False):
+        if negativo:
+            return abs(db[:, np.array(itemset) - 1]-1)
+        return db[:, np.array(itemset) - 1]
+
+    @staticmethod
+    def abSuppCol(itemset1, itemset2=None, negativo=False):
+        itemsets = np.hstack((itemset1, itemset2)) if itemset2 is not None else itemset1
+        return np.sum(itemsets.all(axis=1), axis=0)
+
+    @staticmethod
+    def relSuppCol(itemset1, itemset2=None, negativo=False):
+        return raMetricas.abSuppCol(itemset1, itemset2, negativo) / itemset1.shape[0]
+
 
     @staticmethod
     def abSupp(db, itemset1, itemset2=None, negativo=False):
@@ -44,7 +61,7 @@ class raMetricas:
         return raSup / antSup
 
     @staticmethod
-    def confDB(a, c):
+    def confCol(a, c):
         base = np.hstack((a, c))
         supRegra = np.sum(base.all(axis=0))
         supAnt = np.sum(a(axis=0))
@@ -94,7 +111,6 @@ class raMetricas:
         df = tb.shape[1] - 1
 
         calcEsp = lambda i, j: np.sum(tb[i, :]) * np.sum(tb[:, j]) / np.sum(tb)
-
         esperado = [calcEsp(i, j) for i in range(tb.shape[0]) for j in range(tb.shape[0])]
         observado = tb.getA1()
 
@@ -130,12 +146,11 @@ class raMetricas:
 
     @staticmethod
     def descCfConf(db, antc, cons):
-        baseCons = db[:, np.array(cons) - 1]
-        baseAnt = db[:, np.array(antc) - 1]
-        baseConsInv = abs(baseCons - 1)
+        consCol = raMetricas.getCol(db, cons, negativo=True)
+        antcCol = raMetricas.getCol(db, antc,)
 
         conf1 = raMetricas.conf(db, antc, cons)
-        conf2 = raMetricas.confDB(baseAnt, baseConsInv)
+        conf2 = raMetricas.confCol(antcCol, consCol)
 
         return conf1 - conf2
 
@@ -147,7 +162,7 @@ class raMetricas:
         baseAntInv = abs(baseAnt - 1)
 
         confRA = raMetricas.conf(db, antc, cons)
-        conf2 = raMetricas.confDB(baseAntInv, baseCons)
+        conf2 = raMetricas.confCol(baseAntInv, baseCons)
 
         return confRA - conf2
 
@@ -159,7 +174,7 @@ class raMetricas:
         baseInvCons = abs(db[:, np.array(cons) - 1]-1)
 
         base = np.hstack((baseAnt, baseInvCons))
-        supRegra = np.sum(base.all(axis=0))
+        supRegra = np.sum(base.all(axis=1))
 
         return (supRA-supRegra) / supRA
 
@@ -167,6 +182,28 @@ class raMetricas:
     def fischers(db, antc, cons):
         tb = raMetricas.tbContingencia(db, antc, cons)
         return fisher(tb)[1]
+
+    @staticmethod
+    def gini(antc, cons):
+        a = raMetricas.relSuppCol(antc, cons) ** 2
+        b = raMetricas.relSuppCol(antc, abs(cons - 1)) ** 2
+        return raMetricas.relSuppCol(antc) * (a+b)
+
+    @staticmethod
+    def giniIndex(db, antc, cons):
+        aP = raMetricas.getCol(db, antc)
+        cP = raMetricas.getCol(db, cons)
+        aN = abs(aP - 1)
+        cN = abs(cP - 1)
+
+        g1 = raMetricas.gini(aP, cP) + raMetricas.gini(aN, cP) - raMetricas.relSuppCol(cP)**2 - raMetricas.relSuppCol(cN)**2
+        g2 = raMetricas.gini(cP, aP) + raMetricas.gini(cN, aP) - raMetricas.relSuppCol(aP)**2 - raMetricas.relSuppCol(aN)**2
+
+        return max(g1, g2)
+
+
+
+
 
 
 
