@@ -201,7 +201,15 @@ class raMetricas:
 
         return max(g1, g2)
 
+    @staticmethod
+    def imbalanceRatio(db, antc, cons):
+        a = raMetricas.getCol(db, antc)
+        c = raMetricas.getCol(db, cons)
 
+        termo1 = abs(raMetricas.relSuppCol(a) - raMetricas.relSuppCol(c))
+        termo2 = raMetricas.relSuppCol(db, cons) + raMetricas.relSuppCol(np.hstack(a, c).all(axis=1))
+
+        return termo1 / termo2
 
 
 
