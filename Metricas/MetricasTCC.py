@@ -63,7 +63,7 @@ class raMetricas:
     def confCol(a, c):
         base = np.hstack((a, c))
         supRegra = np.sum(base.all(axis=0))
-        supAnt = np.sum(a(axis=0))
+        supAnt = np.sum(a, axis=0)
         return supRegra / supAnt
 
     @staticmethod
@@ -320,6 +320,16 @@ regras["antc"] = regras["antc"].str.split()
 
 #print(raMetricas.conf(dados, [1], [6, 18]))
 
-raMetricas.descCfConf(dados, [1], [6])
+print(raMetricas.descCfConf(dados, [1], [6]))
+
+print(raMetricas.relSuppCol(raMetricas.getCol(dados, [6]), raMetricas.getCol(dados, [1])))
+print(raMetricas.relSupp(dados, [6], [1]))
+
+
+a = raMetricas.getCol(dados, [1])
+c = raMetricas.getCol(dados, [6])
+
+print(raMetricas.confCol(a, c))
+print(raMetricas.conf(dados, [6], [1]))
 
 #print(collectiveStrength([6,1]))
