@@ -25,7 +25,7 @@ class raMetricas:
     @staticmethod
     def abSuppCol(itemset1, itemset2=None, negativo=False):
         itemsets = np.hstack((itemset1, itemset2)) if itemset2 is not None else itemset1
-        return np.sum(itemsets.all(axis=1), axis=0)
+        return np.sum(itemsets.all(axis=1))
 
     @staticmethod
     def relSuppCol(itemset1, itemset2=None, negativo=False):
@@ -40,7 +40,7 @@ class raMetricas:
         if negativo:
             return np.sum(raMetricas.intersect(abs(db - 1), itemset), axis=0)
         # np.sum achata o vetor usando soma no eixo passado como parametro.
-        return np.sum(raMetricas.intersect(db, itemset), axis=0)
+        return np.sum(raMetricas.intersect(db, itemset))
 
     @staticmethod
     def relSupp(bd, itemset, itemset2=None, negativo=False):
@@ -62,8 +62,8 @@ class raMetricas:
     @staticmethod
     def confCol(a, c):
         base = np.hstack((a, c))
-        supRegra = np.sum(base.all(axis=0))
-        supAnt = np.sum(a, axis=0)
+        supRegra = np.sum(base.all(axis=1))
+        supAnt = np.sum(a)
         return supRegra / supAnt
 
     @staticmethod
@@ -330,6 +330,6 @@ a = raMetricas.getCol(dados, [1])
 c = raMetricas.getCol(dados, [6])
 
 print(raMetricas.confCol(a, c))
-print(raMetricas.conf(dados, [6], [1]))
+print(raMetricas.conf(dados, [1], [6]))
 
 #print(collectiveStrength([6,1]))
