@@ -150,7 +150,6 @@ class raMetricas:
 
         conf1 = raMetricas.conf(db, antc, cons)
         conf2 = raMetricas.confCol(antcCol, consCol)
-
         return conf1 - conf2
 
 
@@ -162,7 +161,6 @@ class raMetricas:
 
         confRA = raMetricas.conf(db, antc, cons)
         conf2 = raMetricas.confCol(baseAntInv, baseCons)
-
         return confRA - conf2
 
     @staticmethod
@@ -222,6 +220,19 @@ class raMetricas:
         return termo1 / termo2
 
     @staticmethod
+    def kappa(db, antc, cons):
+        ac = raMetricas.relSupp(db, antc, cons)
+        acN = raMetricas.relSupp(db, antc, cons, negativo=True)
+        a = raMetricas.relSupp(db, antc)
+        aN = raMetricas.relSupp(db, antc, negativo=True)
+        c = raMetricas.relSupp(db,cons)
+        cN = raMetricas.relSupp(db, cons, negativo=True)
+
+        t1 = ac + acN - a * c - aN * cN
+        t2 = 1 - a * c - aN * cN
+        return t1 / t2
+
+    @staticmethod
     def klosgen(db, antc, cons):
         return sqrt(raMetricas.relSupp(db, antc, cons)) * (raMetricas.conf(db, antc, cons) - raMetricas.relSupp(db, cons))
 
@@ -230,7 +241,6 @@ class raMetricas:
         return (raMetricas.conf(db, antc, cons) + raMetricas.conf(db, cons, antc)) / 2
 
     @staticmethod
-
     def predictiveAssociation(db, antc, cons):
         pass
 
@@ -287,6 +297,14 @@ class raMetricas:
         return t1 / t2
 
     @staticmethod
+    def sebagSchoenauerMeasure(db, antc, cons):
+        t1 = raMetricas.relSupp(db, antc, cons)
+        a = raMetricas.getCol(db, antc)
+        c = raMetricas.getCol(db, cons, negativo=True)
+        t2 = raMetricas.relSuppCol(a, c)
+        return t1 / t2
+
+    @staticmethod
     def varyingRatesLiaison(db, antc, cons):
         t1 = raMetricas.relSupp(db, antc, cons)
         t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
@@ -333,3 +351,5 @@ print(raMetricas.confCol(a, c))
 print(raMetricas.conf(dados, [1], [6]))
 
 #print(collectiveStrength([6,1]))
+
+print(raMetricas.abSupp(dados, [1], [6]))
