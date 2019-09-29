@@ -259,6 +259,23 @@ class raMetricas:
         t2 = raMetricas.relSupp(db, cons)
         return t1 / t2
 
+    @staticmethod
+    def maxConf(db, antc, cons):
+        return max(raMetricas.conf(db, antc, cons), raMetricas.conf(db, cons, antc))
+
+    @staticmethod
+    def mutualInformation(db, antc, cons):
+        pass
+
+    @staticmethod
+    def oddsRatio(db, antc, cons):
+        a = raMetricas.getCol(db, antc)
+        c = raMetricas.getCol(db, cons)
+
+        t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, negativo=True)
+        t2 = raMetricas.relSuppCol(a, abs(b-1)) * raMetricas.relSuppCol(abs(a-1), b)
+
+        return t1 / t2
 
 
 
