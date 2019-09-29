@@ -211,7 +211,20 @@ class raMetricas:
 
         return termo1 / termo2
 
+    @staticmethod
+    def improvement(db, antc, cons):
+        pass
 
+    @staticmethod
+    def jaccardCoefficient(db, antc, cons):
+        termo1 = raMetricas.relSupp(db, antc, cons)
+        termo2 = raMetricas.relSupp(db, antc) + raMetricas.relSupp(db, cons) - raMetricas.relSupp(db, antc, cons)
+
+        return termo1 / termo2
+
+    @staticmethod
+    def klosgen(db, antc, cons):
+        return sqrt(raMetricas.relSupp(db, antc, cons)) * (raMetricas.conf(db, antc, cons) - raMetricas.relSupp(db, cons));
 
 
 
