@@ -247,6 +247,18 @@ class raMetricas:
         termo2 = raMetricas.relSupp(db, cons)
         return termo1 / termo2
 
+    @staticmethod
+    def leverage(db, antc, cons):
+        t1 = raMetricas.relSupp(db, antc, cons)
+        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
+        return t1 - t2
+
+    @staticmethod
+    def lift(db, antc, cons):
+        t1 = raMetricas.conf(db, antc, cons)
+        t2 = raMetricas.relSupp(db, cons)
+        return t1 / t2
+
 
 
 
