@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pygini
 from scipy.stats import chisquare
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
@@ -273,10 +272,36 @@ class raMetricas:
         c = raMetricas.getCol(db, cons)
 
         t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, negativo=True)
-        t2 = raMetricas.relSuppCol(a, abs(b-1)) * raMetricas.relSuppCol(abs(a-1), b)
+        t2 = raMetricas.relSuppCol(a, abs(c-1)) * raMetricas.relSuppCol(abs(a-1), c)
 
         return t1 / t2
 
+    @staticmethod
+    def rulePF(db, antc, cons):
+        a = raMetricas.getCol(db, antc)
+        nc = raMetricas.getCol(db, cons, negativo=True)
+
+        t1 = raMetricas.relSupp(db, antc, cons)
+        t2 = raMetricas.relSuppCol(a, nc)
+
+        return t1 / t2
+
+    @staticmethod
+    def varyingRatesLiaison(db, antc, cons):
+        t1 = raMetricas.relSupp(db, antc, cons)
+        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
+
+    @staticmethod
+    def yulesQ(db, antc, cons):
+        t1 = raMetricas.oddsRatio(db, antc, cons) - 1
+        t2 = raMetricas.oddsRatio(db, antc, cons) + 1
+        return t1 / t2
+
+    @staticmethod
+    def yulesY(db, antc, cons):
+        t1 = sqrt(raMetricas.oddsRatio(db, antc, cons)) - 1
+        t2 = sqrt(raMetricas.oddsRatio(db, antc, cons)) + 1
+        return t1 / t2
 
 
 
