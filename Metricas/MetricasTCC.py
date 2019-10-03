@@ -3,45 +3,49 @@ import pandas as pd
 from scipy.stats import chisquare
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
+import timeit
 
 baseDados = "BPressureNishiBook.dat"
 baseRegras = "BPressureNishiBook.txt"
 
 
 class raMetricas:
-    @staticmethod
-    def intersect(db, itemset):
-        base = db[:, np.array(itemset) - 1]
-        return base.all(axis=1)
 
     @staticmethod
     def getCol(db, itemset, not1=False):
+        mtz = db[:, np.array(itemset) - 1]
         if not1:
-            return abs(db[:, np.array(itemset) - 1]-1)
-        return db[:, np.array(itemset) - 1]
+            mtz = np.invert(mtz)
+        return mtz
 
     @staticmethod
-    def abSupp(db, itemset1, itemset2=None, not1=False, not2=False):
+    def intersect(db, itemset1, itemset2=None, not1=False, not2=False):
         itemsets = raMetricas.getCol(db, itemset1, not1=not1)
         if itemset2 is not None:
             itemsets = np.hstack((itemsets, raMetricas.getCol(db, itemset2, not1=not2)))
-        return np.sum(itemsets.all(axis=1))
+        return itemsets.all(axis=1)
+
 
     @staticmethod
-    def relSupp(bd, itemset1, itemset2=None, not1=False, not2=False):
-        return raMetricas.abSupp(bd, itemset1, itemset2, not1, not2) / bd.shape[0]
+    def abSupp(db, itemset1, itemset2=None, not1=False, not2=False):
+        itemsets = raMetricas.intersect(db, itemset1, itemset2, not1, not2)
+        return np.count_nonzero(itemsets)
 
     @staticmethod
-    def subSupp(bd, itemset):
+    def relSupp(db, itemset1, itemset2=None, not1=False, not2=False):
+        return raMetricas.abSupp(db, itemset1, itemset2, not1, not2) / db.shape[0]
+
+    @staticmethod
+    def subSupp(db, itemset):
         # Calcula o suporte absoluto de todos os 1-itemsets contidos em itemset.
-        subSup = bd[:, np.array(itemset) - 1]
+        subSup = db[:, np.array(itemset) - 1]
         subSup = np.sum(subSup, axis=0)
         return subSup
 
     @staticmethod
-    def conf(bd, antc, conq, notA=False, notC=False):
-        suporteRA = raMetricas.abSupp(bd, antc, conq, not1=notA, not2=notC)
-        suporteAntc = raMetricas.abSupp(bd, antc, not1=notA)
+    def conf(db, antc, conq, notA=False, notC=False):
+        suporteRA = raMetricas.abSupp(db, antc, conq, not1=notA, not2=notC)
+        suporteAntc = raMetricas.abSupp(db, antc, not1=notA)
         return suporteRA / suporteAntc
 
     @staticmethod
@@ -207,8 +211,6 @@ class raMetricas:
 
     @staticmethod
     def leastContradiction(db, antc, conq):
-        a = raMetricas.getCol(db, antc)
-        cN = raMetricas.getCol(db, conq, not1=True)
         termo1 = raMetricas.relSupp(db, antc, conq) - raMetricas.relSupp(db, antc, conq, not2=True)
         termo2 = raMetricas.relSupp(db, conq)
         return termo1 / termo2
@@ -275,10 +277,13 @@ class raMetricas:
         return t1 / t2
 
 
-
 mt = pd.read_table(baseDados, delim_whitespace=True, dtype="str", header=None)
 mtBinaria = pd.get_dummies(mt)
-dados = mtBinaria.astype('int').to_numpy()
+dados = mtBinaria.astype('bool').to_numpy()
+print(dados)
+print("\n\n")
+print(np.invert(dados))
+
 
 '''regras = pd.read_table(baseRegras, sep="#", names=("AR", "sup", "cnf"))
 regras["antc"], regras["cons"] =  regras["AR"].str.split("==>").str
@@ -308,6 +313,7 @@ print(raMetricas.conf(dados, [1], [6]))
 print(raMetricas.abSupp(dados, [1], [6]))
 '''
 
+
 print(raMetricas.relSupp(dados, [1], [6], not1=True, not2=True))
-print(1+raMetricas.relSupp(dados, [1], [6]) - raMetricas.relSupp(dados, [1]) - raMetricas.relSupp(dados, [6]))
+print(1 + raMetricas.relSupp(dados, [1], [6]) - raMetricas.relSupp(dados, [1]) - raMetricas.relSupp(dados, [6]))
 
