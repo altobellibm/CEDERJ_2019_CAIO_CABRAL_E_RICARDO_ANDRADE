@@ -3,7 +3,6 @@ import pandas as pd
 from scipy.stats import chisquare
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
-import timeit
 
 baseDados = "BPressureNishiBook.dat"
 baseRegras = "BPressureNishiBook.txt"
