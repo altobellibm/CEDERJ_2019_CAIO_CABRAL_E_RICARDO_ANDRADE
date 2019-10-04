@@ -9,65 +9,47 @@ baseRegras = "BPressureNishiBook.txt"
 
 
 class raMetricas:
-    @staticmethod
-    def intersect(db, itemset):
-        # Cria um vetor de colunas (matriz) de bd, usando a lista itemset como referencia de indice.
-        base = db[:, np.array(itemset) - 1]
-        # Metodo all do np achata a matriz usando and logico no eixo passado como parametro.
-        return base.all(axis=1)
 
     @staticmethod
-    def getCol(db, itemset, negativo=False):
-        if negativo:
-            return abs(db[:, np.array(itemset) - 1]-1)
-        return db[:, np.array(itemset) - 1]
+    def getCol(db, itemset, not1=False):
+        mtz = db[:, np.array(itemset) - 1]
+        if not1:
+            mtz = np.invert(mtz)
+        return mtz
 
     @staticmethod
-    def abSuppCol(itemset1, itemset2=None, negativo=False):
-        itemsets = np.hstack((itemset1, itemset2)) if itemset2 is not None else itemset1
-        return np.sum(itemsets.all(axis=1))
+    def intersect(db, itemset1, itemset2=None, not1=False, not2=False):
+        itemsets = raMetricas.getCol(db, itemset1, not1=not1)
+        if itemset2 is not None:
+            itemsets = np.hstack((itemsets, raMetricas.getCol(db, itemset2, not1=not2)))
+        return itemsets.all(axis=1)
+
 
     @staticmethod
-    def relSuppCol(itemset1, itemset2=None, negativo=False):
-        return raMetricas.abSuppCol(itemset1, itemset2, negativo) / itemset1.shape[0]
+    def abSupp(db, itemset1, itemset2=None, not1=False, not2=False):
+        itemsets = raMetricas.intersect(db, itemset1, itemset2, not1, not2)
+        return np.count_nonzero(itemsets)
 
     @staticmethod
-    def abSupp(db, itemset1, itemset2=None, negativo=False):
-        itemset = itemset1 + (itemset2 if itemset2 is not None else [])
-        # Suporte negativo verifica a existência de transações que nao contem nenhum item do itemset
-        # Chama a msma funcao de intersecao, mas com a base de dados invertida.
-        if negativo:
-            return np.sum(raMetricas.intersect(abs(db - 1), itemset), axis=0)
-        # np.sum achata o vetor usando soma no eixo passado como parametro.
-        return np.sum(raMetricas.intersect(db, itemset))
+    def relSupp(db, itemset1, itemset2=None, not1=False, not2=False):
+        return raMetricas.abSupp(db, itemset1, itemset2, not1, not2) / db.shape[0]
 
     @staticmethod
-    def relSupp(bd, itemset, itemset2=None, negativo=False):
-        return raMetricas.abSupp(bd, itemset, itemset2, negativo) / bd.shape[0]
-
-    @staticmethod
-    def subSupp(bd, itemset):
+    def subSupp(db, itemset):
         # Calcula o suporte absoluto de todos os 1-itemsets contidos em itemset.
-        subSup = bd[:, np.array(itemset) - 1]
+        subSup = db[:, np.array(itemset) - 1]
         subSup = np.sum(subSup, axis=0)
         return subSup
 
     @staticmethod
-    def conf(bd, antc, consq):
-        raSup = raMetricas.abSupp(bd, antc, consq)
-        antSup = raMetricas.abSupp(bd, antc)
-        return raSup / antSup
+    def conf(db, antc, conq, notA=False, notC=False):
+        suporteRA = raMetricas.abSupp(db, antc, conq, not1=notA, not2=notC)
+        suporteAntc = raMetricas.abSupp(db, antc, not1=notA)
+        return suporteRA / suporteAntc
 
     @staticmethod
-    def confCol(a, c):
-        base = np.hstack((a, c))
-        supRegra = np.sum(base.all(axis=1))
-        supAnt = np.sum(a)
-        return supRegra / supAnt
-
-    @staticmethod
-    def addedValue(db, antc, consq):
-        return raMetricas.conf(db, antc, consq) - raMetricas.relSupp(db, consq)
+    def addedValue(db, antc, conq):
+        return raMetricas.conf(db, antc, conq) - raMetricas.relSupp(db, conq)
 
     @staticmethod
     def allConf(db, itemset):
@@ -77,35 +59,37 @@ class raMetricas:
         return raMetricas.relSupp(db, itemset) / max
 
     @staticmethod
-    def casualSupp(db, ant, cons):
-        return raMetricas.relSupp(db, ant, cons) + raMetricas.relSupp(db, ant, cons, negativo=True)
-
-    @staticmethod
-    def casualConf(db, ant, cons):
-        conf1 = raMetricas.conf(db, ant, cons)
-        conf2 = raMetricas.abSupp(db, ant, cons, negativo=True) / raMetricas.abSupp(db, ant, negativo=True)
+    def casualConf(db, antc, conq):
+        conf1 = raMetricas.conf(db, antc, conq)
+        conf2 = raMetricas.conf(db, antc, conq, notA=True, notC=True)
         return (conf1 + conf2) / 2
 
     @staticmethod
-    def certFactor(db, ant, cons):
-        cf = raMetricas.conf(db, ant, cons) - raMetricas.relSupp(db, cons)
-        return cf / raMetricas.relSupp(db, cons, negativo=True)
+    def casualSupp(db, antc, conq):
+        t1 = raMetricas.relSupp(db, antc, conq)
+        t2 = raMetricas.relSupp(db, antc, conq, not1=True, not2=True)
+        return t1 + t2
 
     @staticmethod
-    def tbContingencia(db, antc, cons):
+    def certFactor(db, antc, conq):
+        cf = raMetricas.conf(db, antc, conq) - raMetricas.relSupp(db, conq)
+        return cf / raMetricas.relSupp(db, conq, not1=True)
+
+    @staticmethod
+    def tbContingencia(db, antc, conq):
         bdInv = abs(db-1)
         lin = [raMetricas.intersect(db, antc), raMetricas.intersect(bdInv, antc)]
-        col = [raMetricas.intersect(db, cons), raMetricas.intersect(bdInv, cons)]
+        col = [raMetricas.intersect(db, conq), raMetricas.intersect(bdInv, conq)]
         return np.matrix([[np.sum(i * j) for i in lin] for j in col])
 
     @staticmethod
-    def chiSqrd(db, antc, cons):
+    def chiSqrd(db, antc, conq):
         #    l1 = [5,15,5]
         #    l2 = [50,10,15]
         #    l3 = [55,25,20]
         #    a= np.matrix([l1, l2, l3])
 
-        tb = raMetricas.tbContingencia(db, antc, cons)
+        tb = raMetricas.tbContingencia(db, antc, conq)
         df = tb.shape[1] - 1
 
         calcEsp = lambda i, j: np.sum(tb[i, :]) * np.sum(tb[:, j]) / np.sum(tb)
@@ -122,15 +106,15 @@ class raMetricas:
 
     @staticmethod
     def collectiveStrength(db, itemset):
-        violation = db.shape[0]-raMetricas.abSupp(db, itemset) - raMetricas.abSupp(db, itemset, negativo=True)
+        violation = db.shape[0] - raMetricas.abSupp(db, itemset) - raMetricas.abSupp(db, itemset, not1=True)
         violation /= dados.shape[0]
         sup = raMetricas.relSupp(db, itemset)
 
         return ((1 - violation) / 1 - sup) * ((sup) / violation)
 
     @staticmethod
-    def conviction(db, ant, cons):
-        return (1 - raMetricas.relSupp(db, cons)) / 1 - raMetricas.conf(db, ant, cons)
+    def conviction(db, antc, cons):
+        return (1 - raMetricas.relSupp(db, cons)) / 1 - raMetricas.conf(db, antc, cons)
 
     @staticmethod
     def cosine(db, antc, cons):
@@ -144,35 +128,22 @@ class raMetricas:
 
     @staticmethod
     def descCfConf(db, antc, cons):
-        consCol = raMetricas.getCol(db, cons, negativo=True)
-        antcCol = raMetricas.getCol(db, antc,)
-
         conf1 = raMetricas.conf(db, antc, cons)
-        conf2 = raMetricas.confCol(antcCol, consCol)
+        conf2 = raMetricas.conf(db, antc, cons, notC=True)
         return conf1 - conf2
 
 
     @staticmethod
-    def diffOfConf(db, antc, cons):
-        baseCons = db[:, np.array(cons) - 1]
-        baseAnt = db[:, np.array(antc) - 1]
-        baseAntInv = abs(baseAnt - 1)
-
-        confRA = raMetricas.conf(db, antc, cons)
-        conf2 = raMetricas.confCol(baseAntInv, baseCons)
-        return confRA - conf2
+    def differenceOfConfidence(db, antc, cons):
+        conf1 = raMetricas.conf(db, antc, cons)
+        conf2 = raMetricas.conf(db, antc, cons, notA=True)
+        return conf1 - conf2
 
     @staticmethod
-    def exCounterEx(db, antc, cons):
-        supRA = raMetricas.relSupp(db, antc, cons)
-
-        baseAnt = db[:, np.array(antc) - 1]
-        baseInvCons = abs(db[:, np.array(cons) - 1]-1)
-
-        base = np.hstack((baseAnt, baseInvCons))
-        supRegra = np.sum(base.all(axis=1))
-
-        return (supRA-supRegra) / supRA
+    def exCounterEx(db, antc, conq):
+        suporte1 = raMetricas.abSupp(db, antc, conq)
+        suporte2 = raMetricas.abSupp(db, antc, conq, not2=True)
+        return (suporte1 - suporte2) / suporte1
 
     @staticmethod
     def fischers(db, antc, cons):
@@ -180,31 +151,19 @@ class raMetricas:
         return fisher(tb)[1]
 
     @staticmethod
-    def gini(antc, cons):
-        a = raMetricas.relSuppCol(antc, cons) ** 2
-        b = raMetricas.relSuppCol(antc, abs(cons - 1)) ** 2
-        return raMetricas.relSuppCol(antc) * (a+b)
+    def giniIndex(db, antc, conq):
+        t1 = (raMetricas.conf(db, antc, conq)**2 + raMetricas.conf(db, antc, conq, notA=True)**2)
+        t1 *= raMetricas.relSupp(db, antc)
+        t2 = (raMetricas.conf(db, antc, conq, notA=True)**2 + raMetricas.conf(db, antc, conq, notA=True, notC=True)**2)
+        t2 *= raMetricas.relSupp(db, antc, not1=True)
+        return t1 + t2 - raMetricas.relSupp(db, conq)**2 - raMetricas.relSupp(db, conq, not1=True)
 
     @staticmethod
-    def giniIndex(db, antc, cons):
-        aP = raMetricas.getCol(db, antc)
-        cP = raMetricas.getCol(db, cons)
-        aN = abs(aP - 1)
-        cN = abs(cP - 1)
-
-        g1 = raMetricas.gini(aP, cP) + raMetricas.gini(aN, cP) - raMetricas.relSuppCol(cP)**2 - raMetricas.relSuppCol(cN)**2
-        g2 = raMetricas.gini(cP, aP) + raMetricas.gini(cN, aP) - raMetricas.relSuppCol(aP)**2 - raMetricas.relSuppCol(aN)**2
-
-        return max(g1, g2)
-
-    @staticmethod
-    def imbalanceRatio(db, antc, cons):
-        a = raMetricas.getCol(db, antc)
-        c = raMetricas.getCol(db, cons)
-
-        termo1 = abs(raMetricas.relSuppCol(a) - raMetricas.relSuppCol(c))
-        termo2 = raMetricas.relSuppCol(db, cons) + raMetricas.relSuppCol(np.hstack(a, c).all(axis=1))
-
+    def imbalanceRatio(db, antc, conq):
+        suporteA = raMetricas.relSupp(db, antc)
+        suporteC = raMetricas.relSupp(db, conq)
+        termo1 = abs(suporteA - suporteC)
+        termo2 = suporteA + suporteC - raMetricas.relSupp(db, antc, conq)
         return termo1 / termo2
 
     @staticmethod
@@ -221,23 +180,25 @@ class raMetricas:
     @staticmethod
     def kappa(db, antc, cons):
         ac = raMetricas.relSupp(db, antc, cons)
-        acN = raMetricas.relSupp(db, antc, cons, negativo=True)
+        acN = raMetricas.relSupp(db, antc, cons, not1=True, not2=True)
         a = raMetricas.relSupp(db, antc)
-        aN = raMetricas.relSupp(db, antc, negativo=True)
-        c = raMetricas.relSupp(db,cons)
-        cN = raMetricas.relSupp(db, cons, negativo=True)
+        aN = raMetricas.relSupp(db, antc, not1=True, not2=True)
+        c = raMetricas.relSupp(db, cons)
+        cN = raMetricas.relSupp(db, cons, not1=True, not2=True)
 
         t1 = ac + acN - a * c - aN * cN
         t2 = 1 - a * c - aN * cN
         return t1 / t2
 
     @staticmethod
-    def klosgen(db, antc, cons):
-        return sqrt(raMetricas.relSupp(db, antc, cons)) * (raMetricas.conf(db, antc, cons) - raMetricas.relSupp(db, cons))
+    def klosgen(db, antc, conq):
+        t1 = sqrt(raMetricas.relSupp(db, antc, conq))
+        t2 = (raMetricas.conf(db, antc, conq) - raMetricas.relSupp(db, conq))
+        return t1 * t2
 
     @staticmethod
-    def kulczynski(db, antc, cons):
-        return (raMetricas.conf(db, antc, cons) + raMetricas.conf(db, cons, antc)) / 2
+    def kulczynski(db, antc, conq):
+        return (raMetricas.conf(db, antc, conq) + raMetricas.conf(db, conq, antc)) / 2
 
     @staticmethod
     def predictiveAssociation(db, antc, cons):
@@ -248,28 +209,26 @@ class raMetricas:
         pass
 
     @staticmethod
-    def leastContradiction(db, antc, cons):
-        a = raMetricas.getCol(db, antc)
-        cN = raMetricas.getCol(db, cons, negativo=True)
-        termo1 = raMetricas.relSupp(db, antc, cons) - raMetricas.relSuppCol(a, cN)
-        termo2 = raMetricas.relSupp(db, cons)
+    def leastContradiction(db, antc, conq):
+        termo1 = raMetricas.relSupp(db, antc, conq) - raMetricas.relSupp(db, antc, conq, not2=True)
+        termo2 = raMetricas.relSupp(db, conq)
         return termo1 / termo2
 
     @staticmethod
-    def leverage(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons)
-        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
+    def leverage(db, antc, conq):
+        t1 = raMetricas.relSupp(db, antc, conq)
+        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, conq)
         return t1 - t2
 
     @staticmethod
-    def lift(db, antc, cons):
-        t1 = raMetricas.conf(db, antc, cons)
-        t2 = raMetricas.relSupp(db, cons)
+    def lift(db, antc, conq):
+        t1 = raMetricas.conf(db, antc, conq)
+        t2 = raMetricas.relSupp(db, conq)
         return t1 / t2
 
     @staticmethod
-    def maxConf(db, antc, cons):
-        return max(raMetricas.conf(db, antc, cons), raMetricas.conf(db, cons, antc))
+    def maxConf(db, antc, conq):
+        return max(raMetricas.conf(db, antc, conq), raMetricas.conf(db, conq, antc))
 
     @staticmethod
     def mutualInformation(db, antc, cons):
@@ -280,27 +239,23 @@ class raMetricas:
         a = raMetricas.getCol(db, antc)
         c = raMetricas.getCol(db, cons)
 
-        t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, negativo=True)
-        t2 = raMetricas.relSuppCol(a, abs(c-1)) * raMetricas.relSuppCol(abs(a-1), c)
+        t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, not1=True)
+        t2 = raMetricas.relSupp(db, antc, cons, not2=True) * raMetricas.relSupp(db, antc, cons, not1=True)
 
         return t1 / t2
 
     @staticmethod
-    def rulePF(db, antc, cons):
-        a = raMetricas.getCol(db, antc)
-        nc = raMetricas.getCol(db, cons, negativo=True)
-
-        t1 = raMetricas.relSupp(db, antc, cons)
-        t2 = raMetricas.relSuppCol(a, nc)
-
-        return t1 / t2
+    def ralambondrainyMeasure(db, antc, conq):
+        return raMetricas.relSupp(db, antc, conq, not2=True)
 
     @staticmethod
-    def sebagSchoenauerMeasure(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons)
-        a = raMetricas.getCol(db, antc)
-        c = raMetricas.getCol(db, cons, negativo=True)
-        t2 = raMetricas.relSuppCol(a, c)
+    def rulePF(db, antc, conq):
+        return raMetricas.relSupp(db, antc, conq) * raMetricas.conf(db, antc, conq)
+
+    @staticmethod
+    def sebagSchoenauerMeasure(db, antc, conq):
+        t1 = raMetricas.relSupp(db, antc, conq)
+        t2 = raMetricas.relSupp(db, antc, conq, not2=True)
         return t1 / t2
 
     @staticmethod
@@ -321,10 +276,13 @@ class raMetricas:
         return t1 / t2
 
 
-
 mt = pd.read_table(baseDados, delim_whitespace=True, dtype="str", header=None)
 mtBinaria = pd.get_dummies(mt)
-dados = mtBinaria.astype('int').to_numpy()
+dados = mtBinaria.astype('bool').to_numpy()
+print(dados)
+print("\n\n")
+print(np.invert(dados))
+
 
 '''regras = pd.read_table(baseRegras, sep="#", names=("AR", "sup", "cnf"))
 regras["antc"], regras["cons"] =  regras["AR"].str.split("==>").str
@@ -335,20 +293,26 @@ regras["cons"] = regras["cons"].str.split()
 regras["antc"] = regras["antc"].str.split()
 '''
 
+'''
 #print(raMetricas.conf(dados, [1], [6, 18]))
 
 print(raMetricas.descCfConf(dados, [1], [6]))
 
-print(raMetricas.relSuppCol(raMetricas.getCol(dados, [6]), raMetricas.getCol(dados, [1])))
+
 print(raMetricas.relSupp(dados, [6], [1]))
 
 
 a = raMetricas.getCol(dados, [1])
 c = raMetricas.getCol(dados, [6])
 
-print(raMetricas.confCol(a, c))
 print(raMetricas.conf(dados, [1], [6]))
 
 #print(collectiveStrength([6,1]))
 
 print(raMetricas.abSupp(dados, [1], [6]))
+'''
+
+
+print(raMetricas.relSupp(dados, [1], [6], not1=True, not2=True))
+print(1 + raMetricas.relSupp(dados, [1], [6]) - raMetricas.relSupp(dados, [1]) - raMetricas.relSupp(dados, [6]))
+
