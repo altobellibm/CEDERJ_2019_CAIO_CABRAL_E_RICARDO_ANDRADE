@@ -9,25 +9,24 @@ baseRegras = "BPressureNishiBook.txt"
 
 
 class raMetricas:
-
     @staticmethod
-    def getCol(db, itemset, not1=False):
+    def __getCol(db, itemset, not1=False):
         mtz = db[:, np.array(itemset) - 1]
         if not1:
             mtz = np.invert(mtz)
         return mtz
 
     @staticmethod
-    def intersect(db, itemset1, itemset2=None, not1=False, not2=False):
-        itemsets = raMetricas.getCol(db, itemset1, not1=not1)
+    def __intersect(db, itemset1, itemset2=None, not1=False, not2=False):
+        itemsets = raMetricas.__getCol(db, itemset1, not1=not1)
         if itemset2 is not None:
-            itemsets = np.hstack((itemsets, raMetricas.getCol(db, itemset2, not1=not2)))
+            itemsets = np.hstack((itemsets, raMetricas.__getCol(db, itemset2, not1=not2)))
         return itemsets.all(axis=1)
 
 
     @staticmethod
     def abSupp(db, itemset1, itemset2=None, not1=False, not2=False):
-        itemsets = raMetricas.intersect(db, itemset1, itemset2, not1, not2)
+        itemsets = raMetricas.__intersect(db, itemset1, itemset2, not1, not2)
         return np.count_nonzero(itemsets)
 
     @staticmethod
@@ -76,10 +75,10 @@ class raMetricas:
         return cf / raMetricas.relSupp(db, conq, not1=True)
 
     @staticmethod
-    def tbContingencia(db, antc, conq):
+    def __tbContingencia(db, antc, conq):
         bdInv = abs(db-1)
-        lin = [raMetricas.intersect(db, antc), raMetricas.intersect(bdInv, antc)]
-        col = [raMetricas.intersect(db, conq), raMetricas.intersect(bdInv, conq)]
+        lin = [raMetricas.__intersect(db, antc), raMetricas.__intersect(bdInv, antc)]
+        col = [raMetricas.__intersect(db, conq), raMetricas.__intersect(bdInv, conq)]
         return np.matrix([[np.sum(i * j) for i in lin] for j in col])
 
     @staticmethod
@@ -89,7 +88,7 @@ class raMetricas:
         #    l3 = [55,25,20]
         #    a= np.matrix([l1, l2, l3])
 
-        tb = raMetricas.tbContingencia(db, antc, conq)
+        tb = raMetricas.__tbContingencia(db, antc, conq)
         df = tb.shape[1] - 1
 
         calcEsp = lambda i, j: np.sum(tb[i, :]) * np.sum(tb[:, j]) / np.sum(tb)
@@ -147,7 +146,7 @@ class raMetricas:
 
     @staticmethod
     def fischers(db, antc, cons):
-        tb = raMetricas.tbContingencia(db, antc, cons)
+        tb = raMetricas.__tbContingencia(db, antc, cons)
         return fisher(tb)[1]
 
     @staticmethod
@@ -206,7 +205,7 @@ class raMetricas:
 
     @staticmethod
     def laplaceConf(db, antc, cons):
-        pass
+        return (raMetricas.abSupp(db, antc) + 1) / (raMetricas.abSupp(db, cons) + 2)
 
     @staticmethod
     def leastContradiction(db, antc, conq):
@@ -236,8 +235,8 @@ class raMetricas:
 
     @staticmethod
     def oddsRatio(db, antc, cons):
-        a = raMetricas.getCol(db, antc)
-        c = raMetricas.getCol(db, cons)
+        a = raMetricas.__getCol(db, antc)
+        c = raMetricas.__getCol(db, cons)
 
         t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, not1=True)
         t2 = raMetricas.relSupp(db, antc, cons, not2=True) * raMetricas.relSupp(db, antc, cons, not1=True)
