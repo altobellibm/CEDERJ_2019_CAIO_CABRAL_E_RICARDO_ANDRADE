@@ -80,7 +80,7 @@ class raMetricas:
         bdInv = abs(db-1)
         lin = [raMetricas.__intersect(db, antc), raMetricas.__intersect(bdInv, antc)]
         col = [raMetricas.__intersect(db, conq), raMetricas.__intersect(bdInv, conq)]
-        return np.matrix([[np.sum(i * j) for i in lin] for j in col])
+        return np.matrix([[np.count_nonzero(i * j) for i in lin] for j in col])
 
     @staticmethod
     def chiSqrd(db, antc, conq):
@@ -254,6 +254,12 @@ class raMetricas:
         pass
 
     @staticmethod
+    def CorrelationCoeficient(db, antc, conq):
+        a = raMetricas.relSupp(db, antc)
+        c = raMetricas.relSupp(db, conq)
+        return (raMetricas.relSupp(db, antc, conq) - a * c) / sqrt(a * c * (1-a) * (1-c))
+
+    @staticmethod
     def oddsRatio(db, antc, cons):
         a = raMetricas.__getCol(db, antc)
         c = raMetricas.__getCol(db, cons)
@@ -266,6 +272,12 @@ class raMetricas:
     @staticmethod
     def ralambondrainyMeasure(db, antc, conq):
         return raMetricas.relSupp(db, antc, conq, not2=True)
+
+    @staticmethod
+    def RLD(db, antc, conq):
+        tb = raMetricas.__tbContingencia(db, antc, conq)
+        total = np.sum(tb)
+        return tb[1, 1] * tb[2, 2] - tb[2, 1] * tb[1, 2] / (total ** 2)
 
     @staticmethod
     def rulePF(db, antc, conq):
