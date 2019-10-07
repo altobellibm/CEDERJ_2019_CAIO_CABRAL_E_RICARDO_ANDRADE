@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats import chisquare
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
+from math import log10
 
 baseDados = "BPressureNishiBook.dat"
 baseRegras = "BPressureNishiBook.txt"
@@ -175,6 +176,15 @@ class raMetricas:
         termo2 = raMetricas.relSupp(db, antc) + raMetricas.relSupp(db, cons) - raMetricas.relSupp(db, antc, cons)
 
         return termo1 / termo2
+
+    @staticmethod
+    def Jmeasure(db, antc, cons):
+        t1 = raMetricas.relSupp(db, antc, cons)
+        t2 = raMetricas.conf(db, antc, cons)
+        t3 = raMetricas.relSupp(db, cons)
+        eq1 = t1 * log10(t2 / t3)
+        eq2 = (1-t1) * log10((1-t2) / (1-t3))
+        return eq1 + eq2
 
     @staticmethod
     def kappa(db, antc, cons):
