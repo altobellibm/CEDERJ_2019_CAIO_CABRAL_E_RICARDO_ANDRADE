@@ -167,6 +167,10 @@ class raMetricas:
         return termo1 / termo2
 
     @staticmethod
+    def importance(db, antc, cons):
+        return log10(raMetricas.laplaceConf(db, antc, cons) / raMetricas.laplaceConf(db, antc, cons, not2=True))
+
+    @staticmethod
     def improvement(db, antc, cons):
         pass
 
@@ -214,8 +218,8 @@ class raMetricas:
         pass
 
     @staticmethod
-    def laplaceConf(db, antc, cons):
-        return (raMetricas.abSupp(db, antc) + 1) / (raMetricas.abSupp(db, cons) + 2)
+    def laplaceConf(db, antc, cons, not1=False, not2=False):
+        return (raMetricas.abSupp(db, antc, not1) + 1) / (raMetricas.abSupp(db, cons, not2) + 2)
 
     @staticmethod
     def lermanSimilarity(db, antc, cons):
