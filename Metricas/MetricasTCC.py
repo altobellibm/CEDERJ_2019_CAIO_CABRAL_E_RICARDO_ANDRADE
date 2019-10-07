@@ -4,6 +4,8 @@ from scipy.stats import chisquare
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
 from math import log10
+from itertools import combinations
+
 
 baseDados = "BPressureNishiBook.dat"
 baseRegras = "BPressureNishiBook.txt"
@@ -172,7 +174,10 @@ class raMetricas:
 
     @staticmethod
     def improvement(db, antc, cons):
-        pass
+        confRule = raMetricas.conf(db, antc, cons)
+        improvement = lambda base, cr, a, c: (cr - raMetricas.conf(base, a, c))
+        subRules = [combinations(antc, i) for i in range(len(antc+1))]
+        return min([improvement(db, confRule, subRule, cons) for subRule in subRules])
 
     @staticmethod
     def jaccardCoefficient(db, antc, cons):
@@ -291,8 +296,7 @@ class raMetricas:
 
     @staticmethod
     def varyingRatesLiaison(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons)
-        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
+        return raMetricas.lift(db, antc, cons) - 1
 
     @staticmethod
     def yulesQ(db, antc, cons):
