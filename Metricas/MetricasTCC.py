@@ -208,6 +208,12 @@ class raMetricas:
         return (raMetricas.abSupp(db, antc) + 1) / (raMetricas.abSupp(db, cons) + 2)
 
     @staticmethod
+    def lermanSimilarity(db, antc, cons):
+        t1 = sqrt(db.shape[0])
+        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
+        return (raMetricas.relSupp(db, antc, cons) - t2 / sqrt(t2)) * t1
+
+    @staticmethod
     def leastContradiction(db, antc, conq):
         termo1 = raMetricas.relSupp(db, antc, conq) - raMetricas.relSupp(db, antc, conq, not2=True)
         termo2 = raMetricas.relSupp(db, conq)
