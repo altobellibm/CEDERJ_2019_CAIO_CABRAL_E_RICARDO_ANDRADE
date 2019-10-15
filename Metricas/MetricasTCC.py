@@ -173,16 +173,13 @@ class raMetricas:
 
     @staticmethod
     def conviction(db, antc, cons):
-        return (1 - raMetricas.relSupp(db, cons)) / 1 - raMetricas.conf(db, antc, cons)
+        div = (1 - raMetricas.conf(db, antc, cons))
+        if div == 0:
+            return float("NaN")
+        return (1 - raMetricas.relSupp(db, cons)) / div
 
     @staticmethod
     def cosine(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons)
-        t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
-        return t1 / sqrt(t2)
-
-    @staticmethod
-    def cosine2(db, antc, cons):
         return sqrt(raMetricas.conf(db, antc, cons) * raMetricas.conf(db, cons, antc))
 
     @staticmethod
@@ -406,7 +403,6 @@ rules2['fishersExactTest'] = rules.apply(lambda x: raMetricas.fischers(dados, x[
 rules2['improvement'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
 rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd3(dados, x['antc'], x['consq']), axis=1)
 rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
-rules2['cosine2'] = rules.apply(lambda x: raMetricas.cosine2(dados, x['antc'], x['consq']), axis=1)
 rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
 rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
@@ -440,7 +436,7 @@ rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['ant
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
 teste = pd.DataFrame()
-metrica = 'cosine' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
+metrica = 'conviction' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
 teste['antc'] = rules['antc']
 teste['consq'] = rules['consq']
 teste['hahsler'] = rules[metrica].round(decimals=5)
@@ -455,8 +451,8 @@ print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
 
 # chi quadrado / fisher >> arules retorna resultados estranhos (apenas as regras com 1-itemset antecedente coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
-# cosine >>
-
+# cosine >> OK (NaN falso negativo)
+#
 
 #rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
 #rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
