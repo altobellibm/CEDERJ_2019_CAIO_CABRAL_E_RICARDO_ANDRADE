@@ -23,7 +23,8 @@ class raMetricas:
     def __intersect(db, itemset1, itemset2=None, not1=False, not2=False):
         itemsets = raMetricas.__getCol(db, itemset1, not1=not1)
         if itemset2 is not None:
-            itemsets = np.hstack((itemsets, raMetricas.__getCol(db, itemset2, not1=not2)))
+            it2 = raMetricas.__getCol(db, itemset2, not1=not2)
+            itemsets = np.hstack((itemsets, it2), )
         return itemsets.all(axis=1)
 
 
@@ -175,8 +176,10 @@ class raMetricas:
     @staticmethod
     def improvement(db, antc, cons):
         confRule = raMetricas.conf(db, antc, cons)
+        if len(antc) <= 1:
+            return 0
         improvement = lambda base, cr, a, c: (cr - raMetricas.conf(base, a, c))
-        subRules = [combinations(antc, i) for i in range(len(antc+1))]
+        subRules = [list(j) for i in range(1, len(antc)) for j in combinations(antc, i)]
         return min([improvement(db, confRule, subRule, cons) for subRule in subRules])
 
     @staticmethod
@@ -192,7 +195,11 @@ class raMetricas:
         t2 = raMetricas.conf(db, antc, cons)
         t3 = raMetricas.relSupp(db, cons)
         eq1 = t1 * log10(t2 / t3)
-        eq2 = (1-t1) * log10((1-t2) / (1-t3))
+        sep = (1-t2)/(1-t3)
+        if sep == 0.0:
+            return float("NaN")
+        sep = log10(sep)
+        eq2 = (1-t1) * sep
         return eq1 + eq2
 
     @staticmethod
@@ -224,7 +231,7 @@ class raMetricas:
 
     @staticmethod
     def laplaceConf(db, antc, cons, not1=False, not2=False):
-        return (raMetricas.abSupp(db, antc, not1) + 1) / (raMetricas.abSupp(db, cons, not2) + 2)
+        return (raMetricas.abSupp(db, antc, not1=not1) + 1) / (raMetricas.abSupp(db, cons, not1=not2) + 2)
 
     @staticmethod
     def lermanSimilarity(db, antc, cons):
@@ -268,11 +275,9 @@ class raMetricas:
 
     @staticmethod
     def oddsRatio(db, antc, cons):
-        a = raMetricas.__getCol(db, antc)
-        c = raMetricas.__getCol(db, cons)
-
         t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, not1=True)
         t2 = raMetricas.relSupp(db, antc, cons, not2=True) * raMetricas.relSupp(db, antc, cons, not1=True)
+        if t2 == 0: return float("NaN")
 
         return t1 / t2
 
@@ -284,7 +289,7 @@ class raMetricas:
     def RLD(db, antc, conq):
         tb = raMetricas.__tbContingencia(db, antc, conq)
         total = np.sum(tb)
-        return tb[1, 1] * tb[2, 2] - tb[2, 1] * tb[1, 2] / (total ** 2)
+        return tb[0, 0] * tb[1, 1] - tb[1, 0] * tb[0, 1] / (total ** 2)
 
     @staticmethod
     def rulePF(db, antc, conq):
@@ -294,6 +299,7 @@ class raMetricas:
     def sebagSchoenauerMeasure(db, antc, conq):
         t1 = raMetricas.relSupp(db, antc, conq)
         t2 = raMetricas.relSupp(db, antc, conq, not2=True)
+        if t2 == 0.0: return float("NaN")
         return t1 / t2
 
     @staticmethod
@@ -317,7 +323,9 @@ class raMetricas:
 rules = pd.read_csv(metricas, sep=" ")
 rules["antc"], rules["consq"] = rules["regras"].str.replace("{", "").str.replace("}", "").str.split("=>").str
 rules["antc"] = rules["antc"].str.split(",").apply(lambda x: np.array(list(map(int, x))))
-rules['consq'] = rules['consq'].str.strip(" ").apply(lambda x: list(x))
+
+rules['consq'] = rules['consq'].str.replace(' ', '').str.split()
+rules['consq'] = rules['consq'].apply(lambda x: list( map(int, x) ))
 del rules["regras"]
 
 mt = pd.read_csv(baseDados, sep=" ", dtype="str", header=None)
@@ -326,13 +334,56 @@ mtBinaria = pd.get_dummies(mt).astype('bool')
 #mtBinaria.transpose
 dados = mtBinaria.to_numpy()
 
-rules2 = pd.dataframe
+rules2 = pd.DataFrame()
+rules2['antc'] = rules["antc"]
+rules2['consq'] = rules['consq']
+
 rules2['coverage'] = rules.apply(lambda x: raMetricas.coverage(dados, x['antc'], x['consq']), axis=1)
 rules2['confidence'] = rules.apply(lambda x: raMetricas.conf(dados, x['antc'], x['consq']), axis=1)
 rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['consq']), axis=1)
 rules2['leverage'] = rules.apply(lambda x: raMetricas.leverage(dados, x['antc'], x['consq']), axis=1)
 rules2['fishersExactTest'] = rules.apply(lambda x: raMetricas.fischers(dados, x['antc'], x['consq']), axis=1)
 rules2['improvement'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
+rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd(dados, x['antc'], x['consq']), axis=1)
+rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
+rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
+rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
+rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
+rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
+rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
+rules2['imbalance'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
+rules2['kulczynski'] = rules.apply(lambda x: raMetricas.kulczynski(dados, x['antc'], x['consq']), axis=1)
+#rules2['collectiveStrength'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc']), axis=1)
+rules2['jaccard'] = rules.apply(lambda x: raMetricas.jaccardCoefficient(dados, x['antc'], x['consq']), axis=1)
+rules2['kappa'] = rules.apply(lambda x: raMetricas.kappa(dados, x['antc'], x['consq']), axis=1)
+rules2['mutualInformation'] = rules.apply(lambda x: raMetricas.mutualInformation(dados, x['antc'], x['consq']), axis=1)
+rules2['jMeasure'] = rules.apply(lambda x: raMetricas.Jmeasure(dados, x['antc'], x['consq']), axis=1)
+rules2['laplace'] = rules.apply(lambda x: raMetricas.laplaceConf(dados, x['antc'], x['consq']), axis=1)
+rules2['certainty'] = rules.apply(lambda x: raMetricas.certFactor(dados, x['antc'], x['consq']), axis=1)
+rules2['addedValue'] = rules.apply(lambda x: raMetricas.addedValue(dados, x['antc'], x['consq']), axis=1)
+rules2['maxconfidence'] = rules.apply(lambda x: raMetricas.maxConf(dados, x['antc'], x['consq']), axis=1)
+rules2['rulePowerFactor'] = rules.apply(lambda x: raMetricas.rulePF(dados, x['antc'], x['consq']), axis=1)
+rules2['ralambondrainy'] = rules.apply(lambda x: raMetricas.ralambondrainyMeasure(dados, x['antc'], x['consq']), axis=1)
+rules2['descriptiveConfirm'] = rules.apply(lambda x: raMetricas.descCfConf(dados, x['antc'], x['consq']), axis=1)
+rules2['sebag'] = rules.apply(lambda x: raMetricas.sebagSchoenauerMeasure(dados, x['antc'], x['consq']), axis=1)
+rules2['counterexample'] = rules.apply(lambda x: raMetricas.exCounterEx(dados, x['antc'], x['consq']), axis=1)
+rules2['casualSupport'] = rules.apply(lambda x: raMetricas.casualSupp(dados, x['antc'], x['consq']), axis=1)
+rules2['casualConfidence'] = rules.apply(lambda x: raMetricas.casualConf(dados, x['antc'], x['consq']), axis=1)
+rules2['leastContradiction'] = rules.apply(lambda x: raMetricas.leastContradiction(dados, x['antc'], x['consq']), axis=1)
+rules2['varyingLiaison'] = rules.apply(lambda x: raMetricas.varyingRatesLiaison(dados, x['antc'], x['consq']), axis=1)
+rules2['yuleQ'] = rules.apply(lambda x: raMetricas.yulesQ(dados, x['antc'], x['consq']), axis=1)
+rules2['yuleY'] = rules.apply(lambda x: raMetricas.yulesY(dados, x['antc'], x['consq']), axis=1)
+rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['antc'], x['consq']), axis=1)
+
+print(rules['confidence'].round(decimals=5).equals(rules2['confidence'].round(decimals=5)))
+teste = pd.DataFrame()
+teste['c1'] = rules['doc'].round(decimals=5)
+teste['c2'] = rules2['doc'].round(decimals=5)
+teste['c3'] = teste['c1'].eq(teste['c2'])
+rules2 = rules2.round(decimals=5)
+rules = rules.round(decimals=5)
+print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
+
 pass
 #rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
 #rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
@@ -371,6 +422,6 @@ print(raMetricas.abSupp(dados, [1], [6]))
 '''
 
 
-print(raMetricas.relSupp(dados, [1], [6], not1=True, not2=True))
-print(1 + raMetricas.relSupp(dados, [1], [6]) - raMetricas.relSupp(dados, [1]) - raMetricas.relSupp(dados, [6]))
+#print(raMetricas.relSupp(dados, [1], [6], not1=True, not2=True))
+#print(1 + raMetricas.relSupp(dados, [1], [6]) - raMetricas.relSupp(dados, [1]) - raMetricas.relSupp(dados, [6]))
 
