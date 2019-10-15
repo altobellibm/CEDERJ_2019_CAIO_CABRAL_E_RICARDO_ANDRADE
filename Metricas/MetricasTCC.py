@@ -212,11 +212,13 @@ class raMetricas:
 
     @staticmethod
     def giniIndex(db, antc, conq):
-        t1 = (raMetricas.conf(db, antc, conq)**2 + raMetricas.conf(db, antc, conq, notA=True)**2)
-        t1 *= raMetricas.relSupp(db, antc)
-        t2 = (raMetricas.conf(db, antc, conq, notA=True)**2 + raMetricas.conf(db, antc, conq, notA=True, notC=True)**2)
-        t2 *= raMetricas.relSupp(db, antc, not1=True)
-        return t1 + t2 - raMetricas.relSupp(db, conq)**2 - raMetricas.relSupp(db, conq, not1=True)
+        t1 = raMetricas.relSupp(db, antc)
+        t1 *= raMetricas.conf(db, antc, conq)**2 + raMetricas.conf(db, antc, conq, notC=True)**2
+        t1 -= raMetricas.relSupp(db, conq)**2
+        t2 = raMetricas.relSupp(db, antc, not1=True)
+        t2 *= raMetricas.conf(db, antc, conq, notA=True)**2 + raMetricas.conf(db, antc, conq, notA=True, notC=True)**2
+        t2 -= raMetricas.relSupp(db, conq, not1=True)**2
+        return t1 + t2
 
     @staticmethod
     def imbalanceRatio(db, antc, conq):
@@ -332,11 +334,20 @@ class raMetricas:
 
     @staticmethod
     def oddsRatio(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, not1=True)
+        t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, not1=True, not2=True)
         t2 = raMetricas.relSupp(db, antc, cons, not2=True) * raMetricas.relSupp(db, antc, cons, not1=True)
         if t2 == 0: return float("NaN")
-
         return t1 / t2
+
+    @staticmethod
+    def phi(db, antc, cons):
+        f11 = raMetricas.relSupp(db, antc, cons)
+        f1x = raMetricas.relSupp(db, antc)
+        fx1 = raMetricas.relSupp(db, cons)
+        f0x = 1 - f1x
+        fx0 = 1 - fx1
+
+        return (f11-f1x*fx1) / sqrt(f1x*fx1*f0x*fx0)
 
     @staticmethod
     def ralambondrainyMeasure(db, antc, conq):
@@ -406,6 +417,7 @@ rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['
 rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
 rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
+rules2['phi'] = rules.apply(lambda x: raMetricas.phi(dados, x['antc'], x['consq']), axis=1)
 rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
 rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
 rules2['imbalance'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
@@ -436,7 +448,7 @@ rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['ant
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
 teste = pd.DataFrame()
-metrica = 'conviction' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
+metrica = 'phi' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
 teste['antc'] = rules['antc']
 teste['consq'] = rules['consq']
 teste['hahsler'] = rules[metrica].round(decimals=5)
@@ -449,10 +461,9 @@ teste['Equals'] = teste['TCC'].eq(teste['hahsler'])
 
 print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
 
-# chi quadrado / fisher >> arules retorna resultados estranhos (apenas as regras com 1-itemset antecedente coincidem
+# chi quadrado / fisher / gini / oddsRatio >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
 # cosine >> OK (NaN falso negativo)
-#
 
 #rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
 #rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
