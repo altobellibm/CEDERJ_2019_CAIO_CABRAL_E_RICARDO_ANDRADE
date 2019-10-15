@@ -6,7 +6,7 @@ from math import sqrt
 from math import log10
 from itertools import combinations
 
-
+metricas = "metricasRegras.dat"
 baseDados = "BPressureNishiBook.dat"
 baseRegras = "BPressureNishiBook.txt"
 
@@ -256,7 +256,9 @@ class raMetricas:
 
     @staticmethod
     def mutualInformation(db, antc, cons):
-        pass
+        I = lambda i: i * log10(i) + (1-i) * log10(1-i)
+        return I(raMetricas.relSupp(db,cons) - I(raMetricas.relSupp(db, antc, cons)))
+
 
     @staticmethod
     def CorrelationCoeficient(db, antc, conq):
@@ -311,14 +313,35 @@ class raMetricas:
         return t1 / t2
 
 
-mt = pd.read_table(baseDados, delim_whitespace=True, dtype="str", header=None)
-mtBinaria = pd.get_dummies(mt)
-dados = mtBinaria.astype('bool').to_numpy()
-print(dados)
-print("\n\n")
-print(np.invert(dados))
 
+rules = pd.read_csv(metricas, sep=" ")
+rules["antc"], rules["consq"] = rules["regras"].str.replace("{", "").str.replace("}", "").str.split("=>").str
+rules["antc"] = rules["antc"].str.split(",").apply(lambda x: np.array(list(map(int, x))))
+rules['consq'] = rules['consq'].str.strip(" ").apply(lambda x: list(x))
+del rules["regras"]
 
+mt = pd.read_csv(baseDados, sep=" ", dtype="str", header=None)
+
+mtBinaria = pd.get_dummies(mt).astype('bool')
+#mtBinaria.transpose
+dados = mtBinaria.to_numpy()
+
+rules2 = pd.dataframe
+rules2['coverage'] = rules.apply(lambda x: raMetricas.coverage(dados, x['antc'], x['consq']), axis=1)
+rules2['confidence'] = rules.apply(lambda x: raMetricas.conf(dados, x['antc'], x['consq']), axis=1)
+rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['consq']), axis=1)
+rules2['leverage'] = rules.apply(lambda x: raMetricas.leverage(dados, x['antc'], x['consq']), axis=1)
+rules2['fishersExactTest'] = rules.apply(lambda x: raMetricas.fischers(dados, x['antc'], x['consq']), axis=1)
+rules2['improvement'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
+pass
+#rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
+#rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
+
+#print(dados)
+#print("\n\n")
+#print(np.invert(dados))
+
+#print(dados[:,[[1, 2], [3, 4]]])
 '''regras = pd.read_table(baseRegras, sep="#", names=("AR", "sup", "cnf"))
 regras["antc"], regras["cons"] =  regras["AR"].str.split("==>").str
 del regras["AR"]
