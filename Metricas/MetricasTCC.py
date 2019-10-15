@@ -96,15 +96,6 @@ class raMetricas:
                          [c01, c00]])
 
     @staticmethod
-    def __tbContingencia3(db, antc, conq):
-        c11 = raMetricas.abSupp(db, antc, conq)
-        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
-        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
-        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
-        return np.array([[c11, c10],
-                         [c01, c00]])
-
-    @staticmethod
     def chiSqrd2(db, antc, conq):
         n = db.shape[0]
         c11 = raMetricas.abSupp(db, antc, conq)
@@ -197,6 +188,7 @@ class raMetricas:
     def differenceOfConfidence(db, antc, cons):
         conf1 = raMetricas.conf(db, antc, cons)
         conf2 = raMetricas.conf(db, antc, cons, notA=True)
+
         return conf1 - conf2
 
     @staticmethod
@@ -263,16 +255,15 @@ class raMetricas:
 
     @staticmethod
     def kappa(db, antc, cons):
-        ac = raMetricas.relSupp(db, antc, cons)
-        acN = raMetricas.relSupp(db, antc, cons, not1=True, not2=True)
-        a = raMetricas.relSupp(db, antc)
-        aN = raMetricas.relSupp(db, antc, not1=True, not2=True)
-        c = raMetricas.relSupp(db, cons)
-        cN = raMetricas.relSupp(db, cons, not1=True, not2=True)
+        n = db.shape[0]
+        f11 = raMetricas.relSupp(db, antc, cons)
+        f00 = raMetricas.relSupp(db, antc, cons, not1=True, not2=True)
+        f1x = raMetricas.relSupp(db, antc)
+        f0x = raMetricas.relSupp(db, antc, not1=True)
+        fx1 = raMetricas.relSupp(db, cons)
+        fx0 = raMetricas.relSupp(db, cons, not1=True, not2=True)
+        return (f11 + f00 - f1x * fx1 - f0x * fx0) / (1 - f1x * fx1 - f0x * fx0)
 
-        t1 = ac + acN - a * c - aN * cN
-        t2 = 1 - a * c - aN * cN
-        return t1 / t2
 
     @staticmethod
     def klosgen(db, antc, conq):
@@ -355,9 +346,25 @@ class raMetricas:
 
     @staticmethod
     def RLD(db, antc, conq):
-        tb = raMetricas.__tbContingencia(db, antc, conq)
+
+        tb = raMetricas.__tbContingencia2(db, antc, conq)
         total = np.sum(tb)
-        return tb[0, 0] * tb[1, 1] - tb[1, 0] * tb[0, 1] / (total ** 2)
+        x1 = tb[0, 0]
+        x2 = tb[0, 1]
+        x3 = tb[1, 0]
+        x4 = tb[1, 1]
+        d = (x1*x4 - x2*x3) / (total**2)
+
+        if (d > 0):
+            if x2 < x3:
+                return d / (d + x3)
+            else:
+                return d / (d + x2)
+        else:
+            if x1 < x4:
+                return d / (d - x1)
+            else:
+                return d / (d - x4)
 
     @staticmethod
     def rulePF(db, antc, conq):
@@ -448,7 +455,7 @@ rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['ant
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
 teste = pd.DataFrame()
-metrica = 'phi' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
+metrica = 'kappa' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
 teste['antc'] = rules['antc']
 teste['consq'] = rules['consq']
 teste['hahsler'] = rules[metrica].round(decimals=5)
@@ -461,7 +468,7 @@ teste['Equals'] = teste['TCC'].eq(teste['hahsler'])
 
 print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
 
-# chi quadrado / fisher / gini / oddsRatio >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
+# chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
 # cosine >> OK (NaN falso negativo)
 
