@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import chisquare
+from scipy.stats import chi2_contingency as chi2
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
 from math import log10
@@ -83,7 +84,62 @@ class raMetricas:
         bdInv = abs(db-1)
         lin = [raMetricas.__intersect(db, antc), raMetricas.__intersect(bdInv, antc)]
         col = [raMetricas.__intersect(db, conq), raMetricas.__intersect(bdInv, conq)]
-        return np.matrix([[np.count_nonzero(i * j) for i in lin] for j in col])
+        return np.array([[np.count_nonzero(i * j) for i in lin] for j in col])
+
+    @staticmethod
+    def __tbContingencia2(db, antc, conq):
+        c11 = raMetricas.abSupp(db, antc, conq)
+        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
+        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
+        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
+        return np.array([[c11, c10],
+                         [c01, c00]])
+
+    @staticmethod
+    def __tbContingencia3(db, antc, conq):
+        c11 = raMetricas.abSupp(db, antc, conq)
+        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
+        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
+        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
+        return np.array([[c11, c10],
+                         [c01, c00]])
+
+    @staticmethod
+    def chiSqrd2(db, antc, conq):
+        n = db.shape[0]
+        c11 = raMetricas.abSupp(db, antc, conq)
+        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
+        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
+        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
+        c1x = raMetricas.relSupp(db, antc)
+        cx1 = raMetricas.relSupp(db, conq)
+
+        obs = np.array([c11, c10, c01, c00])
+        exp = np.array([n*c1x*cx1, n*c1x*(1-cx1), n*(1-c1x)*cx1, n*(1-c1x)*(1-cx1)])
+
+
+        return chisquare(f_obs=obs, f_exp=exp, ddof=1)[0]
+        #return sqrt(sum(((obs[i] - exp[i]) / exp[i])**2 for i in range(len(obs))))
+
+    @staticmethod
+    def chiSqrd3(db, antc, conq):
+        n = db.shape[0]
+        c11 = raMetricas.abSupp(db, antc, conq)
+        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
+        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
+        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
+        c1x = raMetricas.relSupp(db, antc)
+        cx1 = raMetricas.relSupp(db, conq)
+
+        obs = np.array([[c00, c01], [c10, c11]])
+        exp = np.outer([n*c1x*cx1, n*c1x*(1-cx1)], [n*(1-c1x)*cx1, n*(1-c1x)*(1-cx1)])
+
+        calc = lambda i, j: (obs[i, j] - exp[i, j])**2 / exp[i,j]
+        return sum(calc(i, j) for i in range(obs.shape[0]) for j in range(obs.shape[0]))
+
+
+
+
 
     @staticmethod
     def chiSqrd(db, antc, conq):
@@ -92,12 +148,12 @@ class raMetricas:
         #    l3 = [55,25,20]
         #    a= np.matrix([l1, l2, l3])
 
-        tb = raMetricas.__tbContingencia(db, antc, conq)
+        tb = raMetricas.__tbContingencia2(db, antc, conq)
         df = tb.shape[1] - 1
 
         calcEsp = lambda i, j: np.sum(tb[i, :]) * np.sum(tb[:, j]) / np.sum(tb)
         esperado = [calcEsp(i, j) for i in range(tb.shape[0]) for j in range(tb.shape[0])]
-        observado = tb.getA1()
+        observado = tb.flatten()
 
         chi, p = chisquare(f_obs=observado, f_exp=esperado, ddof=df)
         return chi
@@ -123,7 +179,11 @@ class raMetricas:
     def cosine(db, antc, cons):
         t1 = raMetricas.relSupp(db, antc, cons)
         t2 = raMetricas.relSupp(db, antc) * raMetricas.relSupp(db, cons)
-        return t1 * sqrt(t2)
+        return t1 / sqrt(t2)
+
+    @staticmethod
+    def cosine2(db, antc, cons):
+        return sqrt(raMetricas.conf(db, antc, cons) * raMetricas.conf(db, cons, antc))
 
     @staticmethod
     def coverage(db, antc, cons):
@@ -179,8 +239,8 @@ class raMetricas:
         if len(antc) <= 1:
             return 0
         improvement = lambda base, cr, a, c: (cr - raMetricas.conf(base, a, c))
-        subRules = [list(j) for i in range(1, len(antc)) for j in combinations(antc, i)]
-        return min([improvement(db, confRule, subRule, cons) for subRule in subRules])
+        subAntcs = [list(j) for i in range(1, len(antc)) for j in combinations(antc, i)]
+        return min([improvement(db, confRule, subAntc, cons) for subAntc in subAntcs])
 
     @staticmethod
     def jaccardCoefficient(db, antc, cons):
@@ -344,8 +404,9 @@ rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['cons
 rules2['leverage'] = rules.apply(lambda x: raMetricas.leverage(dados, x['antc'], x['consq']), axis=1)
 rules2['fishersExactTest'] = rules.apply(lambda x: raMetricas.fischers(dados, x['antc'], x['consq']), axis=1)
 rules2['improvement'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
-rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd(dados, x['antc'], x['consq']), axis=1)
+rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd3(dados, x['antc'], x['consq']), axis=1)
 rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
+rules2['cosine2'] = rules.apply(lambda x: raMetricas.cosine2(dados, x['antc'], x['consq']), axis=1)
 rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
 rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
@@ -375,16 +436,28 @@ rules2['yuleQ'] = rules.apply(lambda x: raMetricas.yulesQ(dados, x['antc'], x['c
 rules2['yuleY'] = rules.apply(lambda x: raMetricas.yulesY(dados, x['antc'], x['consq']), axis=1)
 rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['antc'], x['consq']), axis=1)
 
-print(rules['confidence'].round(decimals=5).equals(rules2['confidence'].round(decimals=5)))
-teste = pd.DataFrame()
-teste['c1'] = rules['doc'].round(decimals=5)
-teste['c2'] = rules2['doc'].round(decimals=5)
-teste['c3'] = teste['c1'].eq(teste['c2'])
+
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
+teste = pd.DataFrame()
+metrica = 'cosine' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
+teste['antc'] = rules['antc']
+teste['consq'] = rules['consq']
+teste['hahsler'] = rules[metrica].round(decimals=5)
+teste['TCC'] = rules2[metrica].round(decimals=5)
+teste['Equals'] = teste['TCC'].eq(teste['hahsler'])
+
+
+#teste.to_csv("teste.csv")
+
+
 print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
 
-pass
+# chi quadrado / fisher >> arules retorna resultados estranhos (apenas as regras com 1-itemset antecedente coincidem
+# improvement >> arules retorna infinito (range da métrica tem teto de 1)
+# cosine >>
+
+
 #rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
 #rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
 
