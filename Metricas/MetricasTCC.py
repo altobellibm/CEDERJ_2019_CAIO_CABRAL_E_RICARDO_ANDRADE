@@ -15,7 +15,11 @@ baseRegras = "BPressureNishiBook.txt"
 class raMetricas:
     @staticmethod
     def __getCol(db, itemset, not1=False):
-        mtz = db[:, np.array(itemset) - 1]
+        teste = np.array(itemset)
+        teste = teste - 1
+        mtz = db[:,  teste]
+        if len(mtz.shape) == 2:
+            mtz = mtz.all(axis=1)
         if not1:
             mtz = np.invert(mtz)
         return mtz
@@ -25,8 +29,9 @@ class raMetricas:
         itemsets = raMetricas.__getCol(db, itemset1, not1=not1)
         if itemset2 is not None:
             it2 = raMetricas.__getCol(db, itemset2, not1=not2)
-            itemsets = np.hstack((itemsets, it2), )
-        return itemsets.all(axis=1)
+            itemsets = np.vstack((itemsets, it2))
+            itemsets = itemsets.all(axis=0)
+        return itemsets
 
 
     @staticmethod
@@ -185,11 +190,17 @@ class raMetricas:
 
 
     @staticmethod
-    def differenceOfConfidence(db, antc, cons):
+    def differenceOfConfidence2(db, antc, cons):
         conf1 = raMetricas.conf(db, antc, cons)
         conf2 = raMetricas.conf(db, antc, cons, notA=True)
 
         return conf1 - conf2
+
+    @staticmethod
+    def differenceOfConfidence(db, antc, cons):
+        c1 = ((raMetricas.relSupp(db, antc) - raMetricas.relSupp(db, antc, cons)) / raMetricas.relSupp(db, antc))
+        c2 = (raMetricas.relSupp(db, antc, cons) / raMetricas.relSupp(db, antc))
+        return c2 - c1
 
     @staticmethod
     def exCounterEx(db, antc, conq):
@@ -276,12 +287,20 @@ class raMetricas:
         return (raMetricas.conf(db, antc, conq) + raMetricas.conf(db, conq, antc)) / 2
 
     @staticmethod
-    def predictiveAssociation(db, antc, cons):
-        pass
+    def predictiveAssociation2(db, antc, consq):
+        fx1 = raMetricas.abSupp(db, antc)
+        fx0 = raMetricas.abSupp(db, consq, not1=True)
+        f11 = raMetricas.abSupp(db, antc, consq)
+        f10 = raMetricas.abSupp(db, antc, consq, not2=True)
+        f01 = raMetricas.abSupp(db, antc, consq, not1=True)
+        f00 = raMetricas.abSupp(db, antc, consq, not1=True, not2=True)
+        x0x1 = max(fx1, fx0)
+
+        return (max(f11, f10) + max(f01, f00) - x0x1) / (db.shape[0] - x0x1)
 
     @staticmethod
     def laplaceConf(db, antc, cons, not1=False, not2=False):
-        return (raMetricas.abSupp(db, antc, not1=not1) + 1) / (raMetricas.abSupp(db, cons, not1=not2) + 2)
+        return (raMetricas.abSupp(db, antc, cons, not1=not1, not2=not2) + 1) / (raMetricas.abSupp(db, antc, not1=not1, not2=not2) + 2)
 
     @staticmethod
     def lermanSimilarity(db, antc, cons):
@@ -325,10 +344,17 @@ class raMetricas:
 
     @staticmethod
     def oddsRatio(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons) * raMetricas.relSupp(db, antc, cons, not1=True, not2=True)
-        t2 = raMetricas.relSupp(db, antc, cons, not2=True) * raMetricas.relSupp(db, antc, cons, not1=True)
-        if t2 == 0: return float("NaN")
-        return t1 / t2
+        if (len(antc) == 2) and (antc[0] == 8) and (antc[1] == 13) and (cons[0] == 5):
+            print()
+        c11 = raMetricas.abSupp(db, antc, cons) # 2
+        c00 = raMetricas.abSupp(db, antc, cons, not1=True, not2=True) # 11
+        c10 = raMetricas.abSupp(db, antc, cons, not2=True) # 1
+        c01 = raMetricas.abSupp(db, antc, cons, not1=True) # 1
+
+        t2 = c10 * c01
+        if t2 == 0:
+            return float("NaN")
+        return (c11*c00)/t2
 
     @staticmethod
     def phi(db, antc, cons):
@@ -413,6 +439,9 @@ rules2 = pd.DataFrame()
 rules2['antc'] = rules["antc"]
 rules2['consq'] = rules['consq']
 
+rules2['support'] = rules.apply(lambda x: raMetricas.relSupp(dados, x['antc'], x['consq']), axis=1)
+rules2['count'] = rules.apply(lambda x: raMetricas.abSupp(dados, x['antc'], x['consq']), axis=1)
+
 rules2['coverage'] = rules.apply(lambda x: raMetricas.coverage(dados, x['antc'], x['consq']), axis=1)
 rules2['confidence'] = rules.apply(lambda x: raMetricas.conf(dados, x['antc'], x['consq']), axis=1)
 rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['consq']), axis=1)
@@ -429,6 +458,7 @@ rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x
 rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
 rules2['imbalance'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
 rules2['kulczynski'] = rules.apply(lambda x: raMetricas.kulczynski(dados, x['antc'], x['consq']), axis=1)
+rules2['lambda'] = rules.apply(lambda x: raMetricas.predictiveAssociation2(dados, x['antc'], x['consq']), axis=1)
 #rules2['collectiveStrength'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc']), axis=1)
 rules2['jaccard'] = rules.apply(lambda x: raMetricas.jaccardCoefficient(dados, x['antc'], x['consq']), axis=1)
 rules2['kappa'] = rules.apply(lambda x: raMetricas.kappa(dados, x['antc'], x['consq']), axis=1)
@@ -455,7 +485,7 @@ rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['ant
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
 teste = pd.DataFrame()
-metrica = 'kappa' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
+metrica = 'oddsRatio' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
 teste['antc'] = rules['antc']
 teste['consq'] = rules['consq']
 teste['hahsler'] = rules[metrica].round(decimals=5)
@@ -471,6 +501,10 @@ print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
 # chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
 # cosine >> OK (NaN falso negativo)
+
+
+
+
 
 #rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
 #rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
