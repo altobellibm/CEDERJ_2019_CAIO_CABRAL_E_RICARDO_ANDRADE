@@ -160,12 +160,20 @@ class raMetricas:
         return np.min(subSup) / np.max(subSup)
 
     @staticmethod
-    def collectiveStrength(db, itemset):
-        violation = db.shape[0] - raMetricas.abSupp(db, itemset) - raMetricas.abSupp(db, itemset, not1=True)
-        violation /= dados.shape[0]
-        sup = raMetricas.relSupp(db, itemset)
-
-        return ((1 - violation) / 1 - sup) * ((sup) / violation)
+    def collectiveStrength(db, antc, consq):
+        n = db.shape[0]
+        f11 = raMetricas.abSupp(db, antc, consq)
+        #conf = raMetricas.conf(db, antc, consq, notA=True, notC=True)
+        f1x = raMetricas.abSupp(db, antc)
+        fx1 = raMetricas.abSupp(db, consq)
+        fx0 = n - fx1
+        f0x = n - f1x
+        f00 = n - f1x - fx1 + f11
+        t1 = (f1x * fx1 + f0x + fx0)
+        t2 = (n-f11-f00)
+        if (t1 == 0) or (t2==0):
+            return float("NaN")
+        return f11*f00/t1 * (n**2 -f1x*fx1-f0x*fx0)/t2
 
     @staticmethod
     def conviction(db, antc, cons):
@@ -333,7 +341,7 @@ class raMetricas:
     @staticmethod
     def mutualInformation(db, antc, cons):
         I = lambda i: i * log10(i) + (1-i) * log10(1-i)
-        return I(raMetricas.relSupp(db,cons) - I(raMetricas.relSupp(db, antc, cons)))
+        return I(raMetricas.relSupp(db, cons)) - I(raMetricas.relSupp(db, antc, cons))
 
 
     @staticmethod
@@ -459,7 +467,7 @@ rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq'
 rules2['imbalance'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
 rules2['kulczynski'] = rules.apply(lambda x: raMetricas.kulczynski(dados, x['antc'], x['consq']), axis=1)
 rules2['lambda'] = rules.apply(lambda x: raMetricas.predictiveAssociation2(dados, x['antc'], x['consq']), axis=1)
-#rules2['collectiveStrength'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc']), axis=1)
+rules2['collectiveStrength'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc'], x['consq']), axis=1)
 rules2['jaccard'] = rules.apply(lambda x: raMetricas.jaccardCoefficient(dados, x['antc'], x['consq']), axis=1)
 rules2['kappa'] = rules.apply(lambda x: raMetricas.kappa(dados, x['antc'], x['consq']), axis=1)
 rules2['mutualInformation'] = rules.apply(lambda x: raMetricas.mutualInformation(dados, x['antc'], x['consq']), axis=1)
@@ -484,19 +492,21 @@ rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['ant
 
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
-teste = pd.DataFrame()
-metrica = 'oddsRatio' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Teste
-teste['antc'] = rules['antc']
-teste['consq'] = rules['consq']
-teste['hahsler'] = rules[metrica].round(decimals=5)
-teste['TCC'] = rules2[metrica].round(decimals=5)
-teste['Equals'] = teste['TCC'].eq(teste['hahsler'])
 
 
-#teste.to_csv("teste.csv")
+def metricas_inspect(discrepancias, df1, df2):
+    hashMap = {}
+    for i in discrepancias:
+        hashMap[i] = pd.DataFrame()
+        hashMap[i]['antc'] = df1['antc']
+        hashMap[i]['consq'] = df1['consq']
+        hashMap[i]['hahsler'] = df1[i].round(decimals=5)
+        hashMap[i]['TCC'] = df2[i].round(decimals=5)
+        hashMap[i]['Equals'] = hashMap[i]['TCC'].eq(hashMap[i]['hahsler'])
+    return hashMap
 
 
-print([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))])
+discrepancias = metricas_inspect([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))], rules, rules2)
 
 # chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
