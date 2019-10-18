@@ -519,32 +519,47 @@ def metricas_inspect(discrepancias, df1, df2):
 
 discrepancias = metricas_inspect([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))], rules, rules2)
 
-y = rules2['support']
-x = rules2['addedValue']
 
-def scatterplot3D(base, nameX, nameY, nameZ):
-    x = base[nameX]
-    y = base[nameY]
-    z = base[nameZ]
+
+def scatterplot3D(df, nameX, nameY, nameZ):
+    x = df[nameX]
+    y = df[nameY]
+    z = df[nameZ]
     fig = plt.figure()
     ax = Axes3D(fig)
     ax.scatter(x, y, z)
     ax.set_xlabel(nameX)
     ax.set_ylabel(nameY)
     ax.set_zlabel(nameZ)
-    plt.show()
+    return plt
 
-def scatterplot2D(base, nameX, nameY):
-    x = base[nameX]
-    y = base[nameY]
-    plt.scatter(x, y)
+def scatterplot2D(df, nameX, nameY):
+    x = df[nameX]
+    y = df[nameY]
+    plt.scatter(x, y, alpha=0.2)
     plt.xlabel(nameX)
     plt.ylabel(nameY)
-    plt.show()
+    return plt
+
+def lineplot2D(df, nameX, nameY):
+    df2 = df.sort_values(by=nameX)
+    x = df2[nameX]
+    y = df2[nameY]
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+    plt.xlabel(nameX)
+    plt.ylabel(nameY)
+    return plt
+
+x = 'support'   #   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Setar aqui
+y = 'confidence'
+z = 'addedValue'
 
 
-    #plt.scatter(x, y, alpha=0.2)
-plt.show()
+scatterplot3D(rules2, x, y, z).show()
+scatterplot2D(rules2, x, z).show()
+lineplot2D(rules2, z, x).show()
 
 
 # chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
