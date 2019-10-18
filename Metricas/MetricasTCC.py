@@ -5,7 +5,12 @@ from scipy.stats import chi2_contingency as chi2
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
 from math import log10
+from math import log
 from itertools import combinations
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+
 
 metricas = "metricasRegras.dat"
 baseDados = "BPressureNishiBook.dat"
@@ -264,12 +269,18 @@ class raMetricas:
         t1 = raMetricas.relSupp(db, antc, cons)
         t2 = raMetricas.conf(db, antc, cons)
         t3 = raMetricas.relSupp(db, cons)
-        eq1 = t1 * log10(t2 / t3)
-        sep = (1-t2)/(1-t3)
-        if sep == 0.0:
+
+
+        u1 = raMetricas.relSupp(db, antc, cons, not2=True)
+        u2 = raMetricas.conf(db, antc, cons, notC=True)
+        u3 = raMetricas.relSupp(db, cons, not1=True)
+
+        if 0 in [t2, u2, t3, u3]:
             return float("NaN")
-        sep = log10(sep)
-        eq2 = (1-t1) * sep
+
+        eq1 = t1 * log10(t2 / t3)
+        eq2 = u1 * log10(u2 / u3)
+
         return eq1 + eq2
 
     @staticmethod
@@ -449,7 +460,6 @@ rules2['consq'] = rules['consq']
 
 rules2['support'] = rules.apply(lambda x: raMetricas.relSupp(dados, x['antc'], x['consq']), axis=1)
 rules2['count'] = rules.apply(lambda x: raMetricas.abSupp(dados, x['antc'], x['consq']), axis=1)
-
 rules2['coverage'] = rules.apply(lambda x: raMetricas.coverage(dados, x['antc'], x['consq']), axis=1)
 rules2['confidence'] = rules.apply(lambda x: raMetricas.conf(dados, x['antc'], x['consq']), axis=1)
 rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['consq']), axis=1)
@@ -460,7 +470,7 @@ rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd3(dados, x['antc'
 rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
 rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
-rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
+rules2[('oddsRatio')] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
 rules2['phi'] = rules.apply(lambda x: raMetricas.phi(dados, x['antc'], x['consq']), axis=1)
 rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
 rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
@@ -506,7 +516,36 @@ def metricas_inspect(discrepancias, df1, df2):
     return hashMap
 
 
+
 discrepancias = metricas_inspect([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))], rules, rules2)
+
+y = rules2['support']
+x = rules2['addedValue']
+
+def scatterplot3D(base, nameX, nameY, nameZ):
+    x = base[nameX]
+    y = base[nameY]
+    z = base[nameZ]
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    ax.scatter(x, y, z)
+    ax.set_xlabel(nameX)
+    ax.set_ylabel(nameY)
+    ax.set_zlabel(nameZ)
+    plt.show()
+
+def scatterplot2D(base, nameX, nameY):
+    x = base[nameX]
+    y = base[nameY]
+    plt.scatter(x, y)
+    plt.xlabel(nameX)
+    plt.ylabel(nameY)
+    plt.show()
+
+
+    #plt.scatter(x, y, alpha=0.2)
+plt.show()
+
 
 # chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
