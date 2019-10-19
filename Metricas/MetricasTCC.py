@@ -200,7 +200,15 @@ class raMetricas:
         result = hypergeom.cdf(k=cxy -1, M=total, n=cy,  N=cx)
         return result
 
+    @staticmethod
+    def hyperLift(db, antc, consq):
+        total = db.shape[0]
+        cxy = raMetricas.abSupp(db, antc, consq)
+        cx = raMetricas.abSupp(db, antc)
+        cy = raMetricas.abSupp(db, consq)
 
+        q = hypergeom.ppf(q=.99, M=total, n=cy,  N=cx)
+        return cxy/q
 
     @staticmethod
     def imbalanceRatio(db, antc, conq):
