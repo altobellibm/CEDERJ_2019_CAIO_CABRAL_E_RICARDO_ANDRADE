@@ -150,10 +150,16 @@ class raMetricas:
         return raMetricas.relSupp(db, antc)
 
     @staticmethod
-    def descCfConf(db, antc, cons):
+    def descCfConf2(db, antc, cons):
         conf1 = raMetricas.conf(db, antc, cons)
         conf2 = raMetricas.conf(db, antc, cons, notC=True)
         return conf1 - conf2
+
+    @staticmethod
+    def descCfConf(db, antc, cons):
+        c1x = raMetricas.abSupp(db, antc)
+        c10 = raMetricas.abSupp(db, antc, cons, not2=True)
+        return (c1x-2*c10)/db.shape[0]
 
     @staticmethod
     def differenceOfConfidence(db, antc, cons):
@@ -363,7 +369,7 @@ class raMetricas:
         x2 = tb[0, 1]
         x3 = tb[1, 0]
         x4 = tb[1, 1]
-        d = (x1*x4 - x2*x3) / (total**2)
+        #d = (x1*x4 - x2*x3) / (total**2)
 
         if (d > 0):
             if x2 < x3:
