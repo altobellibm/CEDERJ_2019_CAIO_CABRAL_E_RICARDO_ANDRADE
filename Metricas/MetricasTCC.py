@@ -155,19 +155,9 @@ class raMetricas:
         conf2 = raMetricas.conf(db, antc, cons, notC=True)
         return conf1 - conf2
 
-
-    @staticmethod
-    def differenceOfConfidence2(db, antc, cons):
-        conf1 = raMetricas.conf(db, antc, cons)
-        conf2 = raMetricas.conf(db, antc, cons, notA=True)
-
-        return conf1 - conf2
-
     @staticmethod
     def differenceOfConfidence(db, antc, cons):
-        c1 = ((raMetricas.relSupp(db, antc) - raMetricas.relSupp(db, antc, cons)) / raMetricas.relSupp(db, antc))
-        c2 = (raMetricas.relSupp(db, antc, cons) / raMetricas.relSupp(db, antc))
-        return c2 - c1
+        return raMetricas.conf(db, antc, cons) - raMetricas.conf(db, antc, cons, notA=True)
 
     @staticmethod
     def exCounterEx(db, antc, conq):
