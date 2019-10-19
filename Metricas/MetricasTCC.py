@@ -90,74 +90,40 @@ class raMetricas:
         return cf / raMetricas.relSupp(db, conq, not1=True)
 
     @staticmethod
-    def __tbContingencia(db, antc, conq):
-        bdInv = abs(db-1)
-        lin = [raMetricas.__intersect(db, antc), raMetricas.__intersect(bdInv, antc)]
-        col = [raMetricas.__intersect(db, conq), raMetricas.__intersect(bdInv, conq)]
-        return np.array([[np.count_nonzero(i * j) for i in lin] for j in col])
-
-    @staticmethod
     def __tbContingencia2(db, antc, conq):
-        c11 = raMetricas.abSupp(db, antc, conq)
-        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
-        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
-        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
-        return np.array([[c11, c10],
-                         [c01, c00]])
+        f11 = raMetricas.abSupp(db, antc, conq)
+        f1x = raMetricas.abSupp(db, antc)
+        fx1 = raMetricas.abSupp(db, antc)
+        f10 = f1x - f11
+        f01 = fx1 - f11
+        #return np.outer([f])
+
 
     @staticmethod
-    def chiSqrd2(db, antc, conq):
+    def __tbContingencia(db, antc, conq):
         n = db.shape[0]
         c11 = raMetricas.abSupp(db, antc, conq)
-        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
-        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
-        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
-        c1x = raMetricas.relSupp(db, antc)
-        cx1 = raMetricas.relSupp(db, conq)
+        c1x = raMetricas.abSupp(db, antc)
+        cx1 = raMetricas.abSupp(db, conq)
+        c10 = c1x - c11
+        c01 = cx1 - c11
+        cx0 = n - cx1
+        c0x = n - c1x
+        c00 = c0x - c01
 
-        obs = np.array([c11, c10, c01, c00])
-        exp = np.array([n*c1x*cx1, n*c1x*(1-cx1), n*(1-c1x)*cx1, n*(1-c1x)*(1-cx1)])
-
-
-        return chisquare(f_obs=obs, f_exp=exp, ddof=1)[0]
-        #return sqrt(sum(((obs[i] - exp[i]) / exp[i])**2 for i in range(len(obs))))
-
-    @staticmethod
-    def chiSqrd3(db, antc, conq):
-        n = db.shape[0]
-        c11 = raMetricas.abSupp(db, antc, conq)
-        c10 = raMetricas.abSupp(db, antc, conq, not2=True)
-        c01 = raMetricas.abSupp(db, antc, conq, not1=True)
-        c00 = raMetricas.abSupp(db, antc, conq, not1=True, not2=True)
-        c1x = raMetricas.relSupp(db, antc)
-        cx1 = raMetricas.relSupp(db, conq)
-
-        obs = np.array([[c00, c01], [c10, c11]])
-        exp = np.outer([n*c1x*cx1, n*c1x*(1-cx1)], [n*(1-c1x)*cx1, n*(1-c1x)*(1-cx1)])
-
-        calc = lambda i, j: (obs[i, j] - exp[i, j])**2 / exp[i,j]
-        return sum(calc(i, j) for i in range(obs.shape[0]) for j in range(obs.shape[0]))
-
-
-
-
+        obs = np.array([[c11, c01], [c10, c00]])
+        exp = np.outer([cx1, cx0], [c1x, c0x]) / n
+        return (obs, exp)
 
     @staticmethod
     def chiSqrd(db, antc, conq):
-        #    l1 = [5,15,5]
-        #    l2 = [50,10,15]
-        #    l3 = [55,25,20]
-        #    a= np.matrix([l1, l2, l3])
+        obs, exp = raMetricas.__tbContingencia(db, antc, conq)
 
-        tb = raMetricas.__tbContingencia2(db, antc, conq)
-        df = tb.shape[1] - 1
+        result = obs - exp
+        result *= result
+        result /= exp
 
-        calcEsp = lambda i, j: np.sum(tb[i, :]) * np.sum(tb[:, j]) / np.sum(tb)
-        esperado = [calcEsp(i, j) for i in range(tb.shape[0]) for j in range(tb.shape[0])]
-        observado = tb.flatten()
-
-        chi, p = chisquare(f_obs=observado, f_exp=esperado, ddof=df)
-        return chi
+        return np.sum(result)
 
     @staticmethod
     def crossSuppRatio(db, itemset):
@@ -168,7 +134,6 @@ class raMetricas:
     def collectiveStrength(db, antc, consq):
         n = db.shape[0]
         f11 = raMetricas.abSupp(db, antc, consq)
-        #conf = raMetricas.conf(db, antc, consq, notA=True, notC=True)
         f1x = raMetricas.abSupp(db, antc)
         fx1 = raMetricas.abSupp(db, consq)
         fx0 = n - fx1
@@ -223,8 +188,8 @@ class raMetricas:
 
     @staticmethod
     def fischers(db, antc, cons):
-        tb = raMetricas.__tbContingencia(db, antc, cons)
-        return fisher(tb)[1]
+        obs = raMetricas.__tbContingencia(db, antc, cons)[0]
+        return fisher(obs)[1]
 
     @staticmethod
     def giniIndex(db, antc, conq):
@@ -319,7 +284,7 @@ class raMetricas:
 
     @staticmethod
     def laplaceConf(db, antc, cons, not1=False, not2=False):
-        return (raMetricas.abSupp(db, antc, cons, not1=not1, not2=not2) + 1) / (raMetricas.abSupp(db, antc, not1=not1, not2=not2) + 2)
+        return (raMetricas.abSupp(db, antc, cons, not1=not1, not2=not2) + 1) / (raMetricas.abSupp(db, antc, not1=not1) + 2)
 
     @staticmethod
     def lermanSimilarity(db, antc, cons):
@@ -392,7 +357,7 @@ class raMetricas:
     @staticmethod
     def RLD(db, antc, conq):
 
-        tb = raMetricas.__tbContingencia2(db, antc, conq)
+        tb = raMetricas.__tbContingencia(db, antc, conq)[0]
         total = np.sum(tb)
         x1 = tb[0, 0]
         x2 = tb[0, 1]
@@ -466,7 +431,7 @@ rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['cons
 rules2['leverage'] = rules.apply(lambda x: raMetricas.leverage(dados, x['antc'], x['consq']), axis=1)
 rules2['fishersExactTest'] = rules.apply(lambda x: raMetricas.fischers(dados, x['antc'], x['consq']), axis=1)
 rules2['improvement'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
-rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd3(dados, x['antc'], x['consq']), axis=1)
+rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd(dados, x['antc'], x['consq']), axis=1)
 rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
 rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
@@ -508,16 +473,23 @@ def metricas_inspect(discrepancias, df1, df2):
     hashMap = {}
     for i in discrepancias:
         hashMap[i] = pd.DataFrame()
-        hashMap[i]['antc'] = df1['antc']
-        hashMap[i]['consq'] = df1['consq']
+        #hashMap[i]['antc'] = df1['antc']
+        #hashMap[i]['consq'] = df1['consq']
+        hashMap[i]['Sup Regra'] = df1['support']
         hashMap[i]['hahsler'] = df1[i].round(decimals=5)
         hashMap[i]['TCC'] = df2[i].round(decimals=5)
-        hashMap[i]['Equals'] = hashMap[i]['TCC'].eq(hashMap[i]['hahsler'])
+        hashMap[i]['Difference'] = hashMap[i]['TCC'] - hashMap[i]['hahsler']
+        hashMap[i]['Proportion'] = hashMap[i]['TCC'] / hashMap[i]['hahsler'] - 1
+
     return hashMap
 
 
+def comparaMetricas(arules, tcc):
+    tmp = [i for i in tcc.columns.values if not (tcc[i].equals(arules[i]))]
+    print(tmp)
+    return tmp
 
-discrepancias = metricas_inspect([i for i in rules2.columns.values if not (rules2[i].equals(rules[i]))], rules, rules2)
+discrepancias = metricas_inspect(comparaMetricas(rules, rules2), rules, rules2)
 
 
 
@@ -531,7 +503,7 @@ def scatterplot3D(df, nameX, nameY, nameZ):
     ax.set_xlabel(nameX)
     ax.set_ylabel(nameY)
     ax.set_zlabel(nameZ)
-    return plt
+    return plt.show()
 
 def scatterplot2D(df, nameX, nameY):
     x = df[nameX]
@@ -539,7 +511,7 @@ def scatterplot2D(df, nameX, nameY):
     plt.scatter(x, y, alpha=0.2)
     plt.xlabel(nameX)
     plt.ylabel(nameY)
-    return plt
+    return plt.show()
 
 def lineplot2D(df, nameX, nameY):
     df2 = df.sort_values(by=nameX)
@@ -550,18 +522,19 @@ def lineplot2D(df, nameX, nameY):
     ax.plot(x, y)
     plt.xlabel(nameX)
     plt.ylabel(nameY)
-    return plt
+    return plt.show()
 
-x = 'support'   #   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Setar aqui
-y = 'confidence'
-z = 'addedValue'
-
-
-scatterplot3D(rules2, x, y, z).show()
-scatterplot2D(rules2, x, z).show()
-lineplot2D(rules2, z, x).show()
+'''
+x = 'support'       #
+y = 'confidence'    #   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Setar eixos aqui
+z = 'addedValue'    #
 
 
+scatterplot3D(rules2, x, y, z)
+scatterplot2D(rules2, x, z)
+lineplot2D(rules2, z, x)
+
+'''
 # chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
 # improvement >> arules retorna infinito (range da métrica tem teto de 1)
 # cosine >> OK (NaN falso negativo)
