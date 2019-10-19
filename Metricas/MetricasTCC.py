@@ -211,7 +211,8 @@ class raMetricas:
 
     @staticmethod
     def importance(db, antc, cons):
-        return log10(raMetricas.laplaceConf(db, antc, cons) / raMetricas.laplaceConf(db, antc, cons, not2=True))
+        # implementação do arules diferente da formula
+        return log10(raMetricas.laplaceConf(db, antc, cons) / raMetricas.laplaceConf(db, antc, cons, not1=True))
 
     @staticmethod
     def improvement(db, antc, cons):
