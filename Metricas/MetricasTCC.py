@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import chisquare
-from scipy.stats import chi2_contingency as chi2
+from scipy.stats import hypergeom
+from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
 from math import log10
-from math import log
 from itertools import combinations
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -90,16 +89,6 @@ class raMetricas:
         return cf / raMetricas.relSupp(db, conq, not1=True)
 
     @staticmethod
-    def __tbContingencia2(db, antc, conq):
-        f11 = raMetricas.abSupp(db, antc, conq)
-        f1x = raMetricas.abSupp(db, antc)
-        fx1 = raMetricas.abSupp(db, antc)
-        f10 = f1x - f11
-        f01 = fx1 - f11
-        #return np.outer([f])
-
-
-    @staticmethod
     def __tbContingencia(db, antc, conq):
         n = db.shape[0]
         c11 = raMetricas.abSupp(db, antc, conq)
@@ -122,8 +111,8 @@ class raMetricas:
         result = obs - exp
         result *= result
         result /= exp
-
-        return np.sum(result)
+        result = np.sum(result)
+        return result
 
     @staticmethod
     def crossSuppRatio(db, itemset):
@@ -200,6 +189,18 @@ class raMetricas:
         t2 *= raMetricas.conf(db, antc, conq, notA=True)**2 + raMetricas.conf(db, antc, conq, notA=True, notC=True)**2
         t2 -= raMetricas.relSupp(db, conq, not1=True)**2
         return t1 + t2
+
+
+    @staticmethod
+    def hyperConfidence(db, antc, consq):
+        total = db.shape[0]
+        cxy = raMetricas.abSupp(db, antc, consq)
+        cx = raMetricas.abSupp(db, antc)
+        cy = raMetricas.abSupp(db, consq)
+        result = hypergeom.cdf(k=cxy -1, M=total, n=cy,  N=cx)
+        return result
+
+
 
     @staticmethod
     def imbalanceRatio(db, antc, conq):
@@ -436,6 +437,8 @@ rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd(dados, x['antc']
 rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
 rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
+rules2['hyperConfidence'] = rules.apply(lambda x: raMetricas.hyperConfidence(dados, x['antc'], x['consq']), axis=1)
+rules2['hyperLift'] = rules.apply(lambda x: raMetricas.hyperLift(dados, x['antc'], x['consq']), axis=1)
 rules2[('oddsRatio')] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
 rules2['phi'] = rules.apply(lambda x: raMetricas.phi(dados, x['antc'], x['consq']), axis=1)
 rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
