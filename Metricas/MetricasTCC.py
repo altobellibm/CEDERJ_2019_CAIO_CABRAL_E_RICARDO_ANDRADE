@@ -291,8 +291,8 @@ class raMetricas:
         return (raMetricas.conf(db, antc, conq) + raMetricas.conf(db, conq, antc)) / 2
 
     @staticmethod
-    def predictiveAssociation2(db, antc, consq):
-        fx1 = raMetricas.abSupp(db, antc)
+    def predictiveAssociation(db, antc, consq):
+        fx1 = raMetricas.abSupp(db, consq)
         fx0 = raMetricas.abSupp(db, consq, not1=True)
         f11 = raMetricas.abSupp(db, antc, consq)
         f10 = raMetricas.abSupp(db, antc, consq, not2=True)
@@ -314,6 +314,10 @@ class raMetricas:
 
     @staticmethod
     def leastContradiction(db, antc, conq):
+        return raMetricas.conf(db, conq, antc)
+
+    @staticmethod
+    def leastContradiction2(db, antc, conq):
         termo1 = raMetricas.relSupp(db, antc, conq) - raMetricas.relSupp(db, antc, conq, not2=True)
         termo2 = raMetricas.relSupp(db, conq)
         return termo1 / termo2
@@ -467,7 +471,7 @@ rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x
 rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
 rules2['imbalance'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
 rules2['kulczynski'] = rules.apply(lambda x: raMetricas.kulczynski(dados, x['antc'], x['consq']), axis=1)
-rules2['lambda'] = rules.apply(lambda x: raMetricas.predictiveAssociation2(dados, x['antc'], x['consq']), axis=1)
+rules2['lambda'] = rules.apply(lambda x: raMetricas.predictiveAssociation(dados, x['antc'], x['consq']), axis=1)
 rules2['collectiveStrength'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc'], x['consq']), axis=1)
 rules2['jaccard'] = rules.apply(lambda x: raMetricas.jaccardCoefficient(dados, x['antc'], x['consq']), axis=1)
 rules2['kappa'] = rules.apply(lambda x: raMetricas.kappa(dados, x['antc'], x['consq']), axis=1)
