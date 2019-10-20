@@ -339,10 +339,29 @@ class raMetricas:
         return max(raMetricas.conf(db, antc, conq), raMetricas.conf(db, conq, antc))
 
     @staticmethod
-    def mutualInformation(db, antc, cons):
+    def mutualInformation(db, antc, consq):
+        n = db.shape[0]
+        f11 = raMetricas.abSupp(db, antc, consq)
+        f1x = raMetricas.abSupp(db, antc)
+        fx1 = raMetricas.abSupp(db, consq)
+        f10 = f1x - f11
+        f01 = fx1 - f11
+        f00 = n - f11 - f10 - f01
+        fx0 = n - fx1
+        f0x = n - f1x
+
+        I = lambda n, i, j, k: i * (float("NaN") if 0 in [i, n, j, k] else log(i*n / (j*k)))
+
+        a = I(n, f00, f0x, fx0) + I(n, f01, f0x, fx1)
+        a += I(n, f10, f1x, fx0) + I(n, f11, f1x, fx1)
+        b = -1 * (f0x / n * log(f0x / n) + f1x / n * log(f1x / n))
+        b = min(b, -1 * (fx0 / n * log(fx0 / n) + fx1 / n * log(fx1 / n)) )
+        return a / b
+
+    @staticmethod
+    def mutualInformation3(db, antc, cons):
         I = lambda i: i * log10(i) + (1-i) * log10(1-i)
         return I(raMetricas.relSupp(db, cons)) - I(raMetricas.relSupp(db, antc, cons))
-
 
     @staticmethod
     def CorrelationCoeficient(db, antc, conq):
