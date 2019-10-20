@@ -74,6 +74,13 @@ class raMetricas:
 
     @staticmethod
     def casualConf(db, antc, conq):
+        f1x = raMetricas.abSupp(db, antc)
+        fx1 = raMetricas.abSupp(db, conq)
+        f10 = raMetricas.abSupp(db, antc, conq, not2=True)
+        return 1 - f10/db.shape[0] * (1/f1x + 1/fx1)
+
+    @staticmethod
+    def casualConf2(db, antc, conq):
         conf1 = raMetricas.conf(db, antc, conq)
         conf2 = raMetricas.conf(db, antc, conq, notA=True, notC=True)
         return (conf1 + conf2) / 2
