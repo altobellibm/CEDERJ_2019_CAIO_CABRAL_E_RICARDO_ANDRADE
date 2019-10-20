@@ -361,7 +361,7 @@ class raMetricas:
         return raMetricas.relSupp(db, antc, conq, not2=True)
 
     @staticmethod
-    def RLD(db, antc, conq):
+    def RLD2(db, antc, conq):
 
         tb = raMetricas.__tbContingencia(db, antc, conq)[0]
         total = np.sum(tb)
@@ -381,6 +381,32 @@ class raMetricas:
                 return d / (d - x1)
             else:
                 return d / (d - x4)
+
+    @staticmethod
+    def RLD(db, antc, conq):
+
+        n = db.shape[0]
+        c11 = raMetricas.abSupp(db, antc, conq)
+        c1x = raMetricas.abSupp(db, antc)
+        cx1 = raMetricas.abSupp(db, conq)
+        c10 = c1x - c11
+        c01 = cx1 - c11
+        c00 = n - c11 - c10 - c01
+
+        d = (c11 * c00 - c10 * c01) / n
+
+        if d > 0:
+            if c01 < c10:
+                return d / (d + c01)
+            else:
+                return d / (d + c10)
+        else:
+            if c11 < c00:
+                return d / (d - c11)
+            else:
+                return d / (d - c00)
+
+
 
     @staticmethod
     def rulePF(db, antc, conq):
