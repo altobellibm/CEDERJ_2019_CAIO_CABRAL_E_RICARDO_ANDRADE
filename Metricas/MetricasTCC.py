@@ -80,6 +80,13 @@ class raMetricas:
 
     @staticmethod
     def casualSupp(db, antc, conq):
+        f1x = raMetricas.abSupp(db, antc)
+        fx1 = raMetricas.abSupp(db, conq)
+        f10 = raMetricas.abSupp(db, antc, conq, not2=True)
+        return (f1x + fx1 - 2 * f10) / db.shape[0]
+
+    @staticmethod
+    def casualSupp2(db, antc, conq):
         t1 = raMetricas.relSupp(db, antc, conq)
         t2 = raMetricas.relSupp(db, antc, conq, not1=True, not2=True)
         return t1 + t2
@@ -322,7 +329,7 @@ class raMetricas:
 
     @staticmethod
     def mutualInformation(db, antc, cons):
-        I = lambda i: i * log(i) + (1-i) * log(1-i)
+        I = lambda i: i * log10(i) + (1-i) * log10(1-i)
         return I(raMetricas.relSupp(db, cons)) - I(raMetricas.relSupp(db, antc, cons))
 
 
