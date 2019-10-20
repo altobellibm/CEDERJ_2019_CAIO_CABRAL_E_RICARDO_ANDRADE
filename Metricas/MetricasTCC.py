@@ -5,6 +5,7 @@ from scipy.stats import chi2_contingency
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
 from math import log10
+from math import log
 from itertools import combinations
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -237,22 +238,21 @@ class raMetricas:
 
     @staticmethod
     def Jmeasure(db, antc, cons):
-        t1 = raMetricas.relSupp(db, antc, cons)
-        t2 = raMetricas.conf(db, antc, cons)
-        t3 = raMetricas.relSupp(db, cons)
+        conf = raMetricas.conf(db, antc, cons) #0.875
+        fx1 = raMetricas.relSupp(db, cons)     # 0.4
+        f1x = raMetricas.relSupp(db, antc)     # 0.45
 
-
-        u1 = raMetricas.relSupp(db, antc, cons, not2=True)
-        u2 = raMetricas.conf(db, antc, cons, notC=True)
-        u3 = raMetricas.relSupp(db, cons, not1=True)
-
-        if 0 in [t2, u2, t3, u3]:
+        if 0 in [conf, f1x, fx1]:
             return float("NaN")
 
-        eq1 = t1 * log10(t2 / t3)
-        eq2 = u1 * log10(u2 / u3)
+        t1 = 1 - conf
+        t2 = conf/fx1
+        t3 = 1 - fx1
 
-        return eq1 + eq2
+        if 0 in [t1, t2, t3]:
+            return float("NaN")
+        return f1x * (conf * log(t2) + (t1) * log( (t1) / (t3) ))
+
 
     @staticmethod
     def kappa(db, antc, cons):
@@ -322,7 +322,7 @@ class raMetricas:
 
     @staticmethod
     def mutualInformation(db, antc, cons):
-        I = lambda i: i * log10(i) + (1-i) * log10(1-i)
+        I = lambda i: i * log(i) + (1-i) * log(1-i)
         return I(raMetricas.relSupp(db, cons)) - I(raMetricas.relSupp(db, antc, cons))
 
 
@@ -359,28 +359,6 @@ class raMetricas:
     @staticmethod
     def ralambondrainyMeasure(db, antc, conq):
         return raMetricas.relSupp(db, antc, conq, not2=True)
-
-    @staticmethod
-    def RLD2(db, antc, conq):
-
-        tb = raMetricas.__tbContingencia(db, antc, conq)[0]
-        total = np.sum(tb)
-        x1 = tb[0, 0]
-        x2 = tb[0, 1]
-        x3 = tb[1, 0]
-        x4 = tb[1, 1]
-        #d = (x1*x4 - x2*x3) / (total**2)
-
-        if (d > 0):
-            if x2 < x3:
-                return d / (d + x3)
-            else:
-                return d / (d + x2)
-        else:
-            if x1 < x4:
-                return d / (d - x1)
-            else:
-                return d / (d - x4)
 
     @staticmethod
     def RLD(db, antc, conq):
