@@ -576,7 +576,8 @@ def lineplot2D(df, nameX, nameY):
 
 
 def plotagem(df):
-    while 1:
+    exit = False
+    while not(exit):
         print('Selecione uma métrica (ou "sair"): \n')
         opt = list(df.columns)
         del opt[0:4]
@@ -585,13 +586,20 @@ def plotagem(df):
         for i in range(len(opt)):
             print('[ ' + str(i+1) + ' ] ' + opt[i])
 
-        sel = int(input())-1
-        print(len(opt)-1)
-        if sel > len(opt) - 1 or sel <= 0:
-            print("Opção invalida.")
+        sel = input()
+        if sel in ['sair', 'quit', 'exit']:
+            exit = True
+            break
+        elif sel == '':
+            for i in opt:
+                scatterplot3D(df, i, 'support', 'confidence')
         else:
-            scatterplot3D(df, opt[sel], 'support', 'confidence')
-            #scatterplot2D(df, opt[sel], 'support')
+            sel = int(sel)-1
+            if sel > len(opt) - 1 or sel <= 0:
+                print("Opção invalida.")
+            else:
+                scatterplot3D(df, opt[sel], 'support', 'confidence')
+                #scatterplot2D(df, opt[sel], 'support')
 
 
 plotagem(rules2)
