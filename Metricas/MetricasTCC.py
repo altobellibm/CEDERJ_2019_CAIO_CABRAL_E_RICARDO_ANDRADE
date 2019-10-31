@@ -457,7 +457,7 @@ rules["antc"], rules["consq"] = rules["regras"].str.replace("{", "").str.replace
 rules["antc"] = rules["antc"].str.split(",").apply(lambda x: np.array(list(map(int, x))))
 
 rules['consq'] = rules['consq'].str.replace(' ', '').str.split()
-rules['consq'] = rules['consq'].apply(lambda x: list( map(int, x) ))
+rules['consq'] = rules['consq'].apply(lambda x: list(map(int, x)))
 del rules["regras"]
 
 mt = pd.read_csv(baseDados, sep=" ", dtype="str", header=None)
@@ -529,7 +529,6 @@ def metricas_inspect(discrepancias, df1, df2):
         hashMap[i]['TCC'] = df2[i].round(decimals=5)
         hashMap[i]['Difference'] = hashMap[i]['TCC'] - hashMap[i]['hahsler']
         hashMap[i]['Proportion'] = hashMap[i]['TCC'] / hashMap[i]['hahsler'] - 1
-
     return hashMap
 
 
@@ -538,8 +537,8 @@ def comparaMetricas(arules, tcc):
     print(tmp)
     return tmp
 
-discrepancias = metricas_inspect(comparaMetricas(rules, rules2), rules, rules2)
 
+discrepancias = metricas_inspect(comparaMetricas(rules, rules2), rules, rules2)
 
 
 def scatterplot3D(df, nameX, nameY, nameZ):
@@ -554,6 +553,7 @@ def scatterplot3D(df, nameX, nameY, nameZ):
     ax.set_zlabel(nameZ)
     return plt.show()
 
+
 def scatterplot2D(df, nameX, nameY):
     x = df[nameX]
     y = df[nameY]
@@ -561,6 +561,7 @@ def scatterplot2D(df, nameX, nameY):
     plt.xlabel(nameX)
     plt.ylabel(nameY)
     return plt.show()
+
 
 def lineplot2D(df, nameX, nameY):
     df2 = df.sort_values(by=nameX)
@@ -572,6 +573,37 @@ def lineplot2D(df, nameX, nameY):
     plt.xlabel(nameX)
     plt.ylabel(nameY)
     return plt.show()
+
+
+def plotagem(df):
+    exit = False
+    while not(exit):
+        print('Selecione uma métrica (ou "sair"): \n')
+        opt = list(df.columns)
+        del opt[0:4]
+        del opt[opt.index('confidence')]
+
+        for i in range(len(opt)):
+            print('[ ' + str(i+1) + ' ] ' + opt[i])
+
+        sel = input()
+        if sel in ['sair', 'quit', 'exit']:
+            exit = True
+            break
+        elif sel == '':
+            for i in opt:
+                scatterplot3D(df, i, 'support', 'confidence')
+        else:
+            sel = int(sel)-1
+            if sel > len(opt) - 1 or sel <= 0:
+                print("Opção invalida.")
+            else:
+                scatterplot3D(df, opt[sel], 'support', 'confidence')
+                #scatterplot2D(df, opt[sel], 'support')
+
+
+plotagem(rules2)
+
 
 '''
 x = 'support'       #
