@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import hypergeom
 from scipy.stats import chi2_contingency
+from mpl_toolkits import mplot3d
 from scipy.stats import fisher_exact as fisher
 from math import sqrt
 from math import log10
@@ -484,7 +485,7 @@ rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['ant
 rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
 rules2['hyperConfidence'] = rules.apply(lambda x: raMetricas.hyperConfidence(dados, x['antc'], x['consq']), axis=1)
 rules2['hyperLift'] = rules.apply(lambda x: raMetricas.hyperLift(dados, x['antc'], x['consq']), axis=1)
-rules2[('oddsRatio')] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
+rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
 rules2['phi'] = rules.apply(lambda x: raMetricas.phi(dados, x['antc'], x['consq']), axis=1)
 rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
 rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
@@ -533,9 +534,7 @@ def metricas_inspect(discrepancias, df1, df2):
 
 
 def comparaMetricas(arules, tcc):
-    tmp = [i for i in tcc.columns.values if not (tcc[i].equals(arules[i]))]
-    print(tmp)
-    return tmp
+    return [i for i in tcc.columns.values if not (tcc[i].equals(arules[i]))]
 
 
 discrepancias = metricas_inspect(comparaMetricas(rules, rules2), rules, rules2)
@@ -553,6 +552,22 @@ def scatterplot3D(df, nameX, nameY, nameZ):
     ax.set_zlabel(nameZ)
     return plt.show()
 
+def areaplot3D(df, nameX, nameY, nameZ):
+    x = pd.DataFrame(df[metrica])
+    max = x.max()
+    min = x.min()
+    inc = (max-min)*.1
+    x['grupo'] = pd.cut(x.value, range(min, max, inc ), right=False)
+
+    y = df[nameY]
+    z = df[nameZ]
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    ax.scatter(x, y, z)
+    ax.set_xlabel(nameX)
+    ax.set_ylabel(nameY)
+    ax.set_zlabel(nameZ)
+    return plt.show()
 
 def scatterplot2D(df, nameX, nameY):
     x = df[nameX]
@@ -560,6 +575,19 @@ def scatterplot2D(df, nameX, nameY):
     plt.scatter(x, y, alpha=0.2)
     plt.xlabel(nameX)
     plt.ylabel(nameY)
+    return plt.show()
+
+
+def lineplot2DMetricas(df, *args, sort=False):
+    if sort:
+        df = df.sort_values(by='addedValue')
+    plt.plot(df['support'])
+    for i in args:
+        vals = df[i].values
+        vals = (vals - vals.min()) / vals.ptp()
+        plt.plot(vals)
+    plt.xlabel('Regras')
+    plt.ylabel('Metricas')
     return plt.show()
 
 
@@ -574,35 +602,84 @@ def lineplot2D(df, nameX, nameY):
     plt.ylabel(nameY)
     return plt.show()
 
+#def lineCategorical2D(df, nameX):
+
+def Categorical3D(df, nameX, nameY, kind='surface'):
+    z = df.assign(c1=pd.cut(df[nameX], bins=10))
+    z = z.assign(c2=pd.cut(df[nameY], bins=10))
+    zz = pd.crosstab(z.c1, columns=z.c2, dropna=False, normalize=True)
+    Z = zz.to_numpy()
+    x = np.array([(i + 1) * 0.1 for i in range(10)])
+    y = x.copy()
+    X, Y = np.meshgrid(x, y)
+    ax = plt.axes(projection='3d')
+
+    if kind == 'surface':
+        ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
+    else:
+        ax.contour3D(X, Y, Z, 50, cmap='viridis')
+
+    #indexesX = [i.right for i in zz.index]
+    #indexesY = [i.right for i in zz.columns]
+
+    #ax.set_xticks(indexesX)
+    #ax.set_yticks(indexesY)
+    ax.set(xlim=())
+    ax.set_xlabel(nameX)
+    ax.set_ylabel(nameY)
+    ax.set_zlabel('intersection')
+    ax.set_title('3D Categorical')
+    return plt.show()
+
+
 
 def plotagem(df):
     exit = False
     while not(exit):
-        print('Selecione uma métrica (ou "sair"): \n')
+        print('Selecione uma metrica (ou "sair"): \n')
         opt = list(df.columns)
         del opt[0:4]
         del opt[opt.index('confidence')]
 
-        for i in range(len(opt)):
-            print('[ ' + str(i+1) + ' ] ' + opt[i])
+        print('[ 0 ] Plotar tudo' + (' ' * 23) + '[ ' + str(len(opt) + 1) + ' ] Sair\n')
+        print('='*60 + '\n\n')
+        for i in range(len(opt)//2):
+            n = i * 2
+            lin = ''
+            for j in range(2):
+                k = n+j+1
+                if k <= len(opt):
+                    lin += '[ ' + str(k) + ' ] ' + opt[k]
+                    lin += (' ' * (30 - len(lin)))
+            print(lin)
 
         sel = input()
-        if sel in ['sair', 'quit', 'exit']:
+
+        try:
+            sel = int(sel)
+        except:
+            print("Opcao Invalida")
+
+        if sel == len(opt)+1:
             exit = True
-            break
-        elif sel == '':
+
+        elif sel == 0:
             for i in opt:
                 scatterplot3D(df, i, 'support', 'confidence')
+        elif (sel > len(opt)+1) or (sel < 0):
+                print("Opcao invalida.")
         else:
-            sel = int(sel)-1
-            if sel > len(opt) - 1 or sel <= 0:
-                print("Opção invalida.")
-            else:
-                scatterplot3D(df, opt[sel], 'support', 'confidence')
-                #scatterplot2D(df, opt[sel], 'support')
+            sel = int(sel) - 1
+            scatterplot3D(df, opt[sel], 'support', 'confidence')
+            #scatterplot2D(df, opt[sel], 'support')
 
 
-plotagem(rules2)
+
+
+#lineplot2D(rules2, 'support', 'addedValue')
+#Categorical3D(rules2, 'support', 'lift')
+#lineplot2DMetricas(rules2, 'lift')
+#plotagem(rules2)
 
 
 '''
