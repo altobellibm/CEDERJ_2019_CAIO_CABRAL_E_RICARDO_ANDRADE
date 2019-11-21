@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import hypergeom
-from scipy.stats import chi2_contingency
-from mpl_toolkits import mplot3d
 from scipy.stats import fisher_exact as fisher
+from scipy.cluster.hierarchy import dendrogram, linkage
 from math import sqrt
 from math import log10
 from math import log
 from itertools import combinations
+import seaborn as sns
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -372,8 +372,6 @@ class raMetricas:
 
     @staticmethod
     def oddsRatio(db, antc, cons):
-        if (len(antc) == 2) and (antc[0] == 8) and (antc[1] == 13) and (cons[0] == 5):
-            print()
         c11 = raMetricas.abSupp(db, antc, cons) # 2
         c00 = raMetricas.abSupp(db, antc, cons, not1=True, not2=True) # 11
         c10 = raMetricas.abSupp(db, antc, cons, not2=True) # 1
@@ -456,7 +454,6 @@ class raMetricas:
 rules = pd.read_csv(metricas, sep=" ")
 rules["antc"], rules["consq"] = rules["regras"].str.replace("{", "").str.replace("}", "").str.split("=>").str
 rules["antc"] = rules["antc"].str.split(",").apply(lambda x: np.array(list(map(int, x))))
-
 rules['consq'] = rules['consq'].str.replace(' ', '').str.split()
 rules['consq'] = rules['consq'].apply(lambda x: list(map(int, x)))
 del rules["regras"]
@@ -464,7 +461,6 @@ del rules["regras"]
 mt = pd.read_csv(baseDados, sep=" ", dtype="str", header=None)
 
 mtBinaria = pd.get_dummies(mt).astype('bool')
-#mtBinaria.transpose
 dados = mtBinaria.to_numpy()
 
 rules2 = pd.DataFrame()
@@ -518,226 +514,30 @@ rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['ant
 rules2 = rules2.round(decimals=5)
 rules = rules.round(decimals=5)
 
+# matriz de correlacao
+del rules2['count']
+#rules2 = rules2.drop('count')
+df = rules2.loc[:, 'support':].corr(method='pearson')
 
-def metricas_inspect(discrepancias, df1, df2):
-    hashMap = {}
-    for i in discrepancias:
-        hashMap[i] = pd.DataFrame()
-        #hashMap[i]['antc'] = df1['antc']
-        #hashMap[i]['consq'] = df1['consq']
-        hashMap[i]['Sup Regra'] = df1['support']
-        hashMap[i]['hahsler'] = df1[i].round(decimals=5)
-        hashMap[i]['TCC'] = df2[i].round(decimals=5)
-        hashMap[i]['Difference'] = hashMap[i]['TCC'] - hashMap[i]['hahsler']
-        hashMap[i]['Proportion'] = hashMap[i]['TCC'] / hashMap[i]['hahsler'] - 1
-    return hashMap
+# mascara para heatmap
+mask = np.zeros_like(df, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
 
+# cor
+cmap = sns.diverging_palette(10, 220, as_cmap=True)
 
-def comparaMetricas(arules, tcc):
-    return [i for i in tcc.columns.values if not (tcc[i].equals(arules[i]))]
+# plotando imagem
+plt.figure(figsize=(10, 4))
+Z = linkage(df, method='ward', metric='euclidean')
+plt.xlabel('Métricas')
+plt.ylabel('Distância')
+dendrogram(Z, labels=df.index, leaf_rotation=90)
+plt.show()
+plt.clf()
 
+Z = sns.heatmap(df, xticklabels=True, yticklabels=True, cmap=cmap, mask=mask, square=True)
+plt.show()
+Z = sns.clustermap(df, xticklabels=True, yticklabels=True, metric='correlation', method='complete', cmap=cmap, square=False)
+plt.show()
 
-discrepancias = metricas_inspect(comparaMetricas(rules, rules2), rules, rules2)
-
-
-def scatterplot3D(df, nameX, nameY, nameZ):
-    x = df[nameX]
-    y = df[nameY]
-    z = df[nameZ]
-    fig = plt.figure()
-    ax = Axes3D(fig)
-    ax.scatter(x, y, z)
-    ax.set_xlabel(nameX)
-    ax.set_ylabel(nameY)
-    ax.set_zlabel(nameZ)
-    return plt.show()
-
-def areaplot3D(df, nameX, nameY, nameZ):
-    x = pd.DataFrame(df[metrica])
-    max = x.max()
-    min = x.min()
-    inc = (max-min)*.1
-    x['grupo'] = pd.cut(x.value, range(min, max, inc ), right=False)
-
-    y = df[nameY]
-    z = df[nameZ]
-    fig = plt.figure()
-    ax = Axes3D(fig)
-    ax.scatter(x, y, z)
-    ax.set_xlabel(nameX)
-    ax.set_ylabel(nameY)
-    ax.set_zlabel(nameZ)
-    return plt.show()
-
-def scatterplot2D(df, nameX, nameY):
-    x = df[nameX]
-    y = df[nameY]
-    plt.scatter(x, y, alpha=0.2)
-    plt.xlabel(nameX)
-    plt.ylabel(nameY)
-    return plt.show()
-
-
-def lineplot2DMetricas(df, *args, sort=False):
-    if sort:
-        df = df.sort_values(by='addedValue')
-    plt.plot(df['support'])
-    for i in args:
-        vals = df[i].values
-        vals = (vals - vals.min()) / vals.ptp()
-        plt.plot(vals)
-    plt.xlabel('Regras')
-    plt.ylabel('Metricas')
-    return plt.show()
-
-
-def lineplot2D(df, nameX, nameY):
-    df2 = df.sort_values(by=nameX)
-    x = df2[nameX]
-    y = df2[nameY]
-
-    fig, ax = plt.subplots()
-    ax.plot(x, y)
-    plt.xlabel(nameX)
-    plt.ylabel(nameY)
-    return plt.show()
-
-#def lineCategorical2D(df, nameX):
-
-def Categorical3D(df, nameX, nameY, kind='surface'):
-    z = df.assign(c1=pd.cut(df[nameX], bins=10))
-    z = z.assign(c2=pd.cut(df[nameY], bins=10))
-    zz = pd.crosstab(z.c1, columns=z.c2, dropna=False, normalize=True)
-    Z = zz.to_numpy()
-    x = np.array([(i + 1) * 0.1 for i in range(10)])
-    y = x.copy()
-    X, Y = np.meshgrid(x, y)
-    ax = plt.axes(projection='3d')
-
-    if kind == 'surface':
-        ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
-    else:
-        ax.contour3D(X, Y, Z, 50, cmap='viridis')
-
-    #indexesX = [i.right for i in zz.index]
-    #indexesY = [i.right for i in zz.columns]
-
-    #ax.set_xticks(indexesX)
-    #ax.set_yticks(indexesY)
-    ax.set(xlim=())
-    ax.set_xlabel(nameX)
-    ax.set_ylabel(nameY)
-    ax.set_zlabel('intersection')
-    ax.set_title('3D Categorical')
-    return plt.show()
-
-
-
-def plotagem(df):
-    exit = False
-    while not(exit):
-        print('Selecione uma metrica (ou "sair"): \n')
-        opt = list(df.columns)
-        del opt[0:4]
-        del opt[opt.index('confidence')]
-
-        print('[ 0 ] Plotar tudo' + (' ' * 23) + '[ ' + str(len(opt) + 1) + ' ] Sair\n')
-        print('='*60 + '\n\n')
-        for i in range(len(opt)//2):
-            n = i * 2
-            lin = ''
-            for j in range(2):
-                k = n+j+1
-                if k <= len(opt):
-                    lin += '[ ' + str(k) + ' ] ' + opt[k]
-                    lin += (' ' * (30 - len(lin)))
-            print(lin)
-
-        sel = input()
-
-        try:
-            sel = int(sel)
-        except:
-            print("Opcao Invalida")
-
-        if sel == len(opt)+1:
-            exit = True
-
-        elif sel == 0:
-            for i in opt:
-                scatterplot3D(df, i, 'support', 'confidence')
-        elif (sel > len(opt)+1) or (sel < 0):
-                print("Opcao invalida.")
-        else:
-            sel = int(sel) - 1
-            scatterplot3D(df, opt[sel], 'support', 'confidence')
-            #scatterplot2D(df, opt[sel], 'support')
-
-
-
-
-#lineplot2D(rules2, 'support', 'addedValue')
-#Categorical3D(rules2, 'support', 'lift')
-#lineplot2DMetricas(rules2, 'lift')
-#plotagem(rules2)
-
-
-'''
-x = 'support'       #
-y = 'confidence'    #   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Setar eixos aqui
-z = 'addedValue'    #
-
-
-scatterplot3D(rules2, x, y, z)
-scatterplot2D(rules2, x, z)
-lineplot2D(rules2, z, x)
-
-'''
-# chi quadrado / fisher / gini / oddsRatio / kappa >> retorna resultados estranhos (apenas as regras com antecedentes 1-itemset coincidem
-# improvement >> arules retorna infinito (range da métrica tem teto de 1)
-# cosine >> OK (NaN falso negativo)
-
-
-
-
-
-#rules['antcBin'] = rules["antc"].apply(lambda x: dados[:, x-1])
-#rules['consBin'] = rules["consQ"].apply(lambda x: dados[:, x-1])
-
-#print(dados)
-#print("\n\n")
-#print(np.invert(dados))
-
-#print(dados[:,[[1, 2], [3, 4]]])
-'''regras = pd.read_table(baseRegras, sep="#", names=("AR", "sup", "cnf"))
-regras["antc"], regras["cons"] =  regras["AR"].str.split("==>").str
-del regras["AR"]
-regras["sup"] = regras["sup"].str.replace("SUP:", "").astype('float')
-regras["cnf"] = regras["cnf"].str.replace("CONF:", "").astype('float')
-regras["cons"] = regras["cons"].str.split()
-regras["antc"] = regras["antc"].str.split()
-'''
-
-'''
-#print(raMetricas.conf(dados, [1], [6, 18]))
-
-print(raMetricas.descCfConf(dados, [1], [6]))
-
-
-print(raMetricas.relSupp(dados, [6], [1]))
-
-
-a = raMetricas.getCol(dados, [1])
-c = raMetricas.getCol(dados, [6])
-
-print(raMetricas.conf(dados, [1], [6]))
-
-#print(collectiveStrength([6,1]))
-
-print(raMetricas.abSupp(dados, [1], [6]))
-'''
-
-
-#print(raMetricas.relSupp(dados, [1], [6], not1=True, not2=True))
-#print(1 + raMetricas.relSupp(dados, [1], [6]) - raMetricas.relSupp(dados, [1]) - raMetricas.relSupp(dados, [6]))
-
+#cg.savefig('Dendrograma')
