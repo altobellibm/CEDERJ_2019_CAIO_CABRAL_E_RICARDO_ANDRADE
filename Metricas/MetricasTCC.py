@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import hypergeom
 from scipy.stats import fisher_exact as fisher
-from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.cluster.hierarchy import dendrogram, linkage, distance, fcluster
 from math import sqrt
 from math import log10
 from math import log
@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
+import scipy.cluster.hierarchy as sch
 
 metricas = "metricasRegras.dat"
 baseDados = "BPressureNishiBook.dat"
@@ -526,6 +527,44 @@ mask[np.triu_indices_from(mask)] = True
 # cor
 cmap = sns.diverging_palette(10, 220, as_cmap=True)
 
+
+def plot_corr(df, size=10):
+    '''Plot a graphical correlation matrix for a dataframe.
+
+    Input:
+        df: pandas DataFrame
+        size: vertical and horizontal size of the plot'''
+
+    # Compute the correlation matrix for the received dataframe
+    corr = df.corr()
+
+    # mascara
+    mask = np.zeros_like(df, dtype=np.bool)
+    mask[np.triu_indices_from(mask)] = True
+
+    # cor
+    cmap = sns.diverging_palette(10, 220, as_cmap=True)
+
+    # Plot the correlation matrix
+    fig, ax = plt.subplots(figsize=(size, size))
+    cax = ax.matshow(corr, cmap='RdYlGn')
+    plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
+    plt.yticks(range(len(corr.columns)), corr.columns)
+
+    # Add the colorbar legend
+    cbar = fig.colorbar(cax, ticks=[-1, 0, 1], aspect=40, shrink=.8)
+
+
+X = df.corr().values
+d = sch.distance.pdist(X)   # vector of ('55' choose 2) pairwise distances
+L = sch.linkage(d, method='ward')
+ind = sch.fcluster(L, 0.5*d.max(), 'distance')
+columns = [df.columns.tolist()[i] for i in list((np.argsort(ind)))]
+df = df.reindex(columns, axis=1)
+
+plot_corr(df, size=18)
+
+'''
 # plotando imagem
 plt.figure(figsize=(10, 4))
 Z = linkage(df, method='ward', metric='euclidean')
@@ -540,4 +579,7 @@ plt.show()
 Z = sns.clustermap(df, xticklabels=True, yticklabels=True, metric='correlation', method='complete', cmap=cmap, square=False)
 plt.show()
 
+
 #cg.savefig('Dendrograma')
+
+'''
