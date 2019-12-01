@@ -14,11 +14,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import scipy.cluster.hierarchy as sch
 
-metricas = "metricasRegras.dat"
-baseDados = "BPressureNishiBook.dat"
-baseRegras = "BPressureNishiBook.txt"
-
-
 class raMetricas:
     @staticmethod
     def __getCol(db, itemset, not1=False):
@@ -75,7 +70,7 @@ class raMetricas:
         return raMetricas.relSupp(db, itemset) / max
 
     @staticmethod
-    def casualConf(db, antc, conq):
+    def causalConf(db, antc, conq):
         f1x = raMetricas.abSupp(db, antc)
         fx1 = raMetricas.abSupp(db, conq)
         f10 = raMetricas.abSupp(db, antc, conq, not2=True)
@@ -88,14 +83,14 @@ class raMetricas:
         return (conf1 + conf2) / 2
 
     @staticmethod
-    def casualSupp(db, antc, conq):
+    def causalSupp(db, antc, conq):
         f1x = raMetricas.abSupp(db, antc)
         fx1 = raMetricas.abSupp(db, conq)
         f10 = raMetricas.abSupp(db, antc, conq, not2=True)
         return (f1x + fx1 - 2 * f10) / db.shape[0]
 
     @staticmethod
-    def casualSupp2(db, antc, conq):
+    def causalSupp2(db, antc, conq):
         t1 = raMetricas.relSupp(db, antc, conq)
         t2 = raMetricas.relSupp(db, antc, conq, not1=True, not2=True)
         return t1 + t2
@@ -452,134 +447,153 @@ class raMetricas:
 
 
 
-rules = pd.read_csv(metricas, sep=" ")
-rules["antc"], rules["consq"] = rules["regras"].str.replace("{", "").str.replace("}", "").str.split("=>").str
-rules["antc"] = rules["antc"].str.split(",").apply(lambda x: np.array(list(map(int, x))))
-rules['consq'] = rules['consq'].str.replace(' ', '').str.split()
-rules['consq'] = rules['consq'].apply(lambda x: list(map(int, x)))
-del rules["regras"]
+def tabelaMetricas():
 
-mt = pd.read_csv(baseDados, sep=" ", dtype="str", header=None)
+    metricas = "metricasRegras.dat"
+    baseDados = "BPressureNishiBook.dat"
+    baseRegras = "BPressureNishiBook.txt"
 
-mtBinaria = pd.get_dummies(mt).astype('bool')
-dados = mtBinaria.to_numpy()
+    rules = pd.read_csv(metricas, sep=" ")
+    rules["antc"], rules["consq"] = rules["regras"].str.replace("{", "").str.replace("}", "").str.split("=>").str
+    rules["antc"] = rules["antc"].str.split(",").apply(lambda x: np.array(list(map(int, x))))
+    rules['consq'] = rules['consq'].str.replace(' ', '').str.split()
+    rules['consq'] = rules['consq'].apply(lambda x: list(map(int, x)))
+    del rules["regras"]
 
-rules2 = pd.DataFrame()
-rules2['antc'] = rules["antc"]
-rules2['consq'] = rules['consq']
+    mt = pd.read_csv(baseDados, sep=" ", dtype="str", header=None)
 
-rules2['support'] = rules.apply(lambda x: raMetricas.relSupp(dados, x['antc'], x['consq']), axis=1)
-rules2['count'] = rules.apply(lambda x: raMetricas.abSupp(dados, x['antc'], x['consq']), axis=1)
-rules2['coverage'] = rules.apply(lambda x: raMetricas.coverage(dados, x['antc'], x['consq']), axis=1)
-rules2['confidence'] = rules.apply(lambda x: raMetricas.conf(dados, x['antc'], x['consq']), axis=1)
-rules2['lift'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['consq']), axis=1)
-rules2['leverage'] = rules.apply(lambda x: raMetricas.leverage(dados, x['antc'], x['consq']), axis=1)
-rules2['fishersExactTest'] = rules.apply(lambda x: raMetricas.fischers(dados, x['antc'], x['consq']), axis=1)
-rules2['improvement'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
-rules2['chiSquared'] = rules.apply(lambda x: raMetricas.chiSqrd(dados, x['antc'], x['consq']), axis=1)
-rules2['cosine'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
-rules2['conviction'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
-rules2['gini'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
-rules2['hyperConfidence'] = rules.apply(lambda x: raMetricas.hyperConfidence(dados, x['antc'], x['consq']), axis=1)
-rules2['hyperLift'] = rules.apply(lambda x: raMetricas.hyperLift(dados, x['antc'], x['consq']), axis=1)
-rules2['oddsRatio'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
-rules2['phi'] = rules.apply(lambda x: raMetricas.phi(dados, x['antc'], x['consq']), axis=1)
-rules2['doc'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
-rules2['RLD'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
-rules2['imbalance'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
-rules2['kulczynski'] = rules.apply(lambda x: raMetricas.kulczynski(dados, x['antc'], x['consq']), axis=1)
-rules2['lambda'] = rules.apply(lambda x: raMetricas.predictiveAssociation(dados, x['antc'], x['consq']), axis=1)
-rules2['collectiveStrength'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc'], x['consq']), axis=1)
-rules2['jaccard'] = rules.apply(lambda x: raMetricas.jaccardCoefficient(dados, x['antc'], x['consq']), axis=1)
-rules2['kappa'] = rules.apply(lambda x: raMetricas.kappa(dados, x['antc'], x['consq']), axis=1)
-rules2['mutualInformation'] = rules.apply(lambda x: raMetricas.mutualInformation(dados, x['antc'], x['consq']), axis=1)
-rules2['jMeasure'] = rules.apply(lambda x: raMetricas.Jmeasure(dados, x['antc'], x['consq']), axis=1)
-rules2['laplace'] = rules.apply(lambda x: raMetricas.laplaceConf(dados, x['antc'], x['consq']), axis=1)
-rules2['certainty'] = rules.apply(lambda x: raMetricas.certFactor(dados, x['antc'], x['consq']), axis=1)
-rules2['addedValue'] = rules.apply(lambda x: raMetricas.addedValue(dados, x['antc'], x['consq']), axis=1)
-rules2['maxconfidence'] = rules.apply(lambda x: raMetricas.maxConf(dados, x['antc'], x['consq']), axis=1)
-rules2['rulePowerFactor'] = rules.apply(lambda x: raMetricas.rulePF(dados, x['antc'], x['consq']), axis=1)
-rules2['ralambondrainy'] = rules.apply(lambda x: raMetricas.ralambondrainyMeasure(dados, x['antc'], x['consq']), axis=1)
-rules2['descriptiveConfirm'] = rules.apply(lambda x: raMetricas.descCfConf(dados, x['antc'], x['consq']), axis=1)
-rules2['sebag'] = rules.apply(lambda x: raMetricas.sebagSchoenauerMeasure(dados, x['antc'], x['consq']), axis=1)
-rules2['counterexample'] = rules.apply(lambda x: raMetricas.exCounterEx(dados, x['antc'], x['consq']), axis=1)
-rules2['casualSupport'] = rules.apply(lambda x: raMetricas.casualSupp(dados, x['antc'], x['consq']), axis=1)
-rules2['casualConfidence'] = rules.apply(lambda x: raMetricas.casualConf(dados, x['antc'], x['consq']), axis=1)
-rules2['leastContradiction'] = rules.apply(lambda x: raMetricas.leastContradiction(dados, x['antc'], x['consq']), axis=1)
-rules2['varyingLiaison'] = rules.apply(lambda x: raMetricas.varyingRatesLiaison(dados, x['antc'], x['consq']), axis=1)
-rules2['yuleQ'] = rules.apply(lambda x: raMetricas.yulesQ(dados, x['antc'], x['consq']), axis=1)
-rules2['yuleY'] = rules.apply(lambda x: raMetricas.yulesY(dados, x['antc'], x['consq']), axis=1)
-rules2['importance'] = rules.apply(lambda x: raMetricas.importance(dados, x['antc'], x['consq']), axis=1)
+    mtBinaria = pd.get_dummies(mt).astype('bool')
+    dados = mtBinaria.to_numpy()
 
+    df = pd.DataFrame()
+    df['antc'] = rules["antc"]
+    df['consq'] = rules['consq']
+    df['Support  1'] = rules.apply(lambda x: raMetricas.relSupp(dados, x['antc'], x['consq']), axis=1)
+    df['count  1'] = rules.apply(lambda x: raMetricas.abSupp(dados, x['antc'], x['consq']), axis=1)
+    df['Confidence  2'] = rules.apply(lambda x: raMetricas.conf(dados, x['antc'], x['consq']), axis=1)
+    df['Added Value  3'] = rules.apply(lambda x: raMetricas.addedValue(dados, x['antc'], x['consq']), axis=1)
+    #All-Confidence
+    df['Causal Support  4'] = rules.apply(lambda x: raMetricas.causalSupp(dados, x['antc'], x['consq']), axis=1)
+    df['Causal Confidence  5'] = rules.apply(lambda x: raMetricas.causalConf(dados, x['antc'], x['consq']), axis=1)
+    df['Certainty Factor  6'] = rules.apply(lambda x: raMetricas.certFactor(dados, x['antc'], x['consq']), axis=1)
+    df['Chi-Squared  7'] = rules.apply(lambda x: raMetricas.chiSqrd(dados, x['antc'], x['consq']), axis=1)
+    #Cross Support Ratio
+    df['Collective Strength  8'] = rules.apply(lambda x: raMetricas.collectiveStrength(dados, x['antc'], x['consq']), axis=1)
+    df['Conviction  9'] = rules.apply(lambda x: raMetricas.conviction(dados, x['antc'], x['consq']), axis=1)
+    df['Cosine 10'] = rules.apply(lambda x: raMetricas.cosine(dados, x['antc'], x['consq']), axis=1)
+    df['Coverage 11'] = rules.apply(lambda x: raMetricas.coverage(dados, x['antc'], x['consq']), axis=1)
+    df['Confirmed Confidence 12'] = rules.apply(lambda x: raMetricas.descCfConf(dados, x['antc'], x['consq']), axis=1)
+    df['Difference of Confidence 13'] = rules.apply(lambda x: raMetricas.differenceOfConfidence(dados, x['antc'], x['consq']), axis=1)
+    df['Counter Example 14'] = rules.apply(lambda x: raMetricas.exCounterEx(dados, x['antc'], x['consq']), axis=1)
+    df['Fisher\'s Exact Test 15'] = rules.apply(lambda x: raMetricas.fischers(dados, x['antc'], x['consq']), axis=1)
+    df['Gini Index 16'] = rules.apply(lambda x: raMetricas.giniIndex(dados, x['antc'], x['consq']), axis=1)
+    df['Hyper Confidence 17'] = rules.apply(lambda x: raMetricas.hyperConfidence(dados, x['antc'], x['consq']), axis=1)
+    df['Hyper Lift 18'] = rules.apply(lambda x: raMetricas.hyperLift(dados, x['antc'], x['consq']), axis=1)
+    df['Imbalance Ratio 19'] = rules.apply(lambda x: raMetricas.imbalanceRatio(dados, x['antc'], x['consq']), axis=1)
+    df['Importance 20'] = rules.apply(lambda x: raMetricas.importance(dados, x['antc'], x['consq']), axis=1)
+    df['Improvement 21'] = rules.apply(lambda x: raMetricas.improvement(dados, x['antc'], x['consq']), axis=1)
+    df['Jaccard Coefficient 22'] = rules.apply(lambda x: raMetricas.jaccardCoefficient(dados, x['antc'], x['consq']), axis=1)
+    df['J-Measure 23'] = rules.apply(lambda x: raMetricas.Jmeasure(dados, x['antc'], x['consq']), axis=1)
+    df['Kappa 24'] = rules.apply(lambda x: raMetricas.kappa(dados, x['antc'], x['consq']), axis=1)
+    df['Klosgen 25'] = rules.apply(lambda x: raMetricas.klosgen(dados, x['antc'], x['consq']), axis=1)
+    df['Kulczynski 26'] = rules.apply(lambda x: raMetricas.kulczynski(dados, x['antc'], x['consq']), axis=1)
+    df['Goodman-Kruskal 27'] = rules.apply(lambda x: raMetricas.predictiveAssociation(dados, x['antc'], x['consq']), axis=1)
+    df['Laplace Confidence 28'] = rules.apply(lambda x: raMetricas.laplaceConf(dados, x['antc'], x['consq']), axis=1)
+    df['Least Contradiction 29'] = rules.apply(lambda x: raMetricas.leastContradiction(dados, x['antc'], x['consq']), axis=1)
+    df['Lerman Similarity 30'] = rules.apply(lambda x: raMetricas.lermanSimilarity(dados, x['antc'], x['consq']), axis=1)
+    df['Leverage 31'] = rules.apply(lambda x: raMetricas.leverage(dados, x['antc'], x['consq']), axis=1)
+    df['Lift 32'] = rules.apply(lambda x: raMetricas.lift(dados, x['antc'], x['consq']), axis=1)
+    df['Max Confidence 33'] = rules.apply(lambda x: raMetricas.maxConf(dados, x['antc'], x['consq']), axis=1)
+    df['Mutual Information 34'] = rules.apply(lambda x: raMetricas.mutualInformation(dados, x['antc'], x['consq']), axis=1)
+    df['Odds Ratio 35'] = rules.apply(lambda x: raMetricas.oddsRatio(dados, x['antc'], x['consq']), axis=1)
+    df['Phi Correlation Coeficient 36'] = rules.apply(lambda x: raMetricas.phi(dados, x['antc'], x['consq']), axis=1)
+    df['Ralambondrainy Measure 37'] = rules.apply(lambda x: raMetricas.ralambondrainyMeasure(dados, x['antc'], x['consq']), axis=1)
+    df['Relative Linkage Disequilibrium 38'] = rules.apply(lambda x: raMetricas.RLD(dados, x['antc'], x['consq']), axis=1)
+    df['Rule Power Factor 39'] = rules.apply(lambda x: raMetricas.rulePF(dados, x['antc'], x['consq']), axis=1)
+    df['Sebag-Schoenauer Measure 40'] = rules.apply(lambda x: raMetricas.sebagSchoenauerMeasure(dados, x['antc'], x['consq']), axis=1)
+    df['Varying Rates Liaison 41'] = rules.apply(lambda x: raMetricas.varyingRatesLiaison(dados, x['antc'], x['consq']), axis=1)
+    df['Yule\'s Q 42'] = rules.apply(lambda x: raMetricas.yulesQ(dados, x['antc'], x['consq']), axis=1)
+    df['Yule\'s Y 43'] = rules.apply(lambda x: raMetricas.yulesY(dados, x['antc'], x['consq']), axis=1)
 
-rules2 = rules2.round(decimals=5)
-rules = rules.round(decimals=5)
-
-# matriz de correlacao
-del rules2['count']
-#rules2 = rules2.drop('count')
-df = rules2.loc[:, 'support':].corr(method='pearson')
-
-# mascara para heatmap
-mask = np.zeros_like(df, dtype=np.bool)
-mask[np.triu_indices_from(mask)] = True
-
-# cor
-cmap = sns.diverging_palette(10, 220, as_cmap=True)
+    df = df.round(decimals=5)
+    df.to_csv('MetricasTCC.csv')
+    return df
 
 
-def plot_corr(df, size=10):
-    '''Plot a graphical correlation matrix for a dataframe.
+def PlotarGraficos(df):
+    # matriz de correlacao
+    del df['count  1']
+    df = df.loc[:, 'Support  1':].corr(method='pearson')
 
-    Input:
-        df: pandas DataFrame
-        size: vertical and horizontal size of the plot'''
-
-    # Compute the correlation matrix for the received dataframe
-    corr = df.corr()
-
-    # mascara
+    # mascara para heatmap
     mask = np.zeros_like(df, dtype=np.bool)
     mask[np.triu_indices_from(mask)] = True
 
     # cor
     cmap = sns.diverging_palette(10, 220, as_cmap=True)
 
-    # Plot the correlation matrix
-    fig, ax = plt.subplots(figsize=(size, size))
-    cax = ax.matshow(corr, cmap='RdYlGn')
-    plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
-    plt.yticks(range(len(corr.columns)), corr.columns)
 
-    # Add the colorbar legend
-    cbar = fig.colorbar(cax, ticks=[-1, 0, 1], aspect=40, shrink=.8)
+    sns.heatmap(df, xticklabels=True, yticklabels=True, cmap=cmap, mask=mask, square=True)
 
 
-X = df.corr().values
-d = sch.distance.pdist(X)   # vector of ('55' choose 2) pairwise distances
-L = sch.linkage(d, method='ward')
-ind = sch.fcluster(L, 0.5*d.max(), 'distance')
-columns = [df.columns.tolist()[i] for i in list((np.argsort(ind)))]
-df = df.reindex(columns, axis=1)
+    y = df.values
+    L = sch.complete(y)
+    ind = sch.fcluster(L, 0.5 * y.max(), criterion='distance')
+    columns = [df.columns.tolist()[i] for i in list((np.argsort(ind)))]
+    df = df.reindex(columns, axis=0).reindex(columns, axis=1)
 
-plot_corr(df, size=18)
+    unique, counts = np.unique(ind, return_counts=True)
+    counts = dict(zip(unique, counts))
 
-'''
-# plotando imagem
-plt.figure(figsize=(10, 4))
-Z = linkage(df, method='ward', metric='euclidean')
-plt.xlabel('Métricas')
-plt.ylabel('Distância')
-dendrogram(Z, labels=df.index, leaf_rotation=90)
-plt.show()
-plt.clf()
+    sns.heatmap(df, xticklabels=True, yticklabels=True, cmap=cmap, mask=mask, square=True)
+    plt.tick_params(labelsize=7)
+    plt.show()
+    plt.clf()
 
-Z = sns.heatmap(df, xticklabels=True, yticklabels=True, cmap=cmap, mask=mask, square=True)
-plt.show()
-Z = sns.clustermap(df, xticklabels=True, yticklabels=True, metric='correlation', method='complete', cmap=cmap, square=False)
-plt.show()
+    i = 0
+    j = 0
+    columns = []
+
+    cluster_th = 4
+
+    for cluster_l1 in set(sorted(ind)):
+        j += counts[cluster_l1]
+        sub = df[df.columns.values[i:j]]
+        if counts[cluster_l1] > cluster_th:
+            y = sub.corr().values
+            L = sch.complete(y)
+            ind = sch.fcluster(L, 0.5 * y.max(), 'distance')
+            col = [sub.columns.tolist()[i] for i in list((np.argsort(ind)))]
+            sub = sub.reindex(col, axis=1)
+        cols = sub.columns.tolist()
+        columns.extend(cols)
+        i = j
+    df2 = df.reindex(columns, axis=0).reindex(columns, axis=1)
+
+    sns.heatmap(df2, xticklabels=True, yticklabels=True, cmap=cmap, mask=mask, square=True)
+
+    print('q para sair, qualquer tecla para continuar')
+    for i in df.loc[:, 'Support  1':].corr(method='pearson'):
+        data = pd.DataFrame(data=df[i].abs())
+        data['Correlação Positiva'] = np.where(df[i] >= 0, df[i], 0)
+        data['Correlação Negativa'] = np.where(df[i] < 0, np.abs(df[i]), 0)
+
+        data = data.sort_values(by=[i], ascending=False)
+        data = data.drop(columns=i, index=i)
+
+        vermelho = cmap(-0.2)
+        azul = cmap(0.8)
+        data = data.head(30)
+        ax = data.plot(kind='bar', title=i, color=[azul, vermelho], stacked=True)
+        ax.set_ylim(0, 1)
+
+        plt.show()
+        plt.close()
+        del data
+        if input() == 'q':
+            break
 
 
-#cg.savefig('Dendrograma')
-
-'''
+if __name__ == "__main__":
+    df = tabelaMetricas()
+    PlotarGraficos(df)
